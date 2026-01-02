@@ -54,7 +54,7 @@ export const UserSwitcher: React.FC = () => {
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-slate-700/50 transition-colors duration-150"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-orange-900/50 transition-colors duration-150"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
@@ -73,7 +73,7 @@ export const UserSwitcher: React.FC = () => {
 
         {/* Chevron */}
         <svg
-          className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+          className={`w-4 h-4 text-orange-300 transition-transform duration-200 ${
             isOpen ? 'rotate-180' : ''
           }`}
           fill="none"

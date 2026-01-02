@@ -61,11 +61,11 @@ export const GoalsList: React.FC = () => {
               onClick={() => handleToggle(goal.id)}
               disabled={isLoading}
               className={`
-                w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-150
+                w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-150 border
                 ${
                   isComplete
-                    ? 'bg-success-50 hover:bg-success-100'
-                    : 'bg-gray-50 hover:bg-gray-100'
+                    ? 'bg-success-50 hover:bg-success-100 border-success-200'
+                    : 'bg-white hover:bg-gray-50 border-gray-200'
                 }
                 ${isLoading ? 'opacity-60' : ''}
               `}

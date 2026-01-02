@@ -5,10 +5,13 @@
  * Handles window creation, lifecycle, and process coordination.
  */
 
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell, nativeImage } from 'electron';
 import path from 'path';
 import { initDatabase, closeDatabase } from './database';
 import { registerIpcHandlers } from './ipc/handlers';
+
+// Set app name for dock display (critical for dev mode where Electron binary is used)
+app.setName('FitWell');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 // Note: Only needed if using Squirrel installer
@@ -67,7 +70,18 @@ async function createWindow(): Promise<void> {
 }
 
 // App lifecycle
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  // Set dock icon on macOS (both dev and prod)
+  if (process.platform === 'darwin' && app.dock) {
+    const iconPath = path.join(__dirname, '../../assets/fitwell-desktop.png');
+    const icon = nativeImage.createFromPath(iconPath);
+    if (!icon.isEmpty()) {
+      app.dock.setIcon(icon);
+    }
+  }
+
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   closeDatabase();

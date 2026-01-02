@@ -158,17 +158,17 @@ export const Calendar: React.FC = () => {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-6 mt-6 pt-4 border-t border-gray-100">
+      <div className="flex items-center justify-center gap-6 mt-6 pt-4 border-t border-gray-200">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-success-500" />
+          <div className="w-4 h-4 rounded bg-success-500 shadow-sm" />
           <span className="text-xs text-gray-500">Complete</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-brand-100" />
+          <div className="w-4 h-4 rounded bg-brand-100 shadow-sm" />
           <span className="text-xs text-gray-500">Partial</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-gray-100 border border-gray-200" />
+          <div className="w-4 h-4 rounded bg-white border border-gray-200 shadow-sm" />
           <span className="text-xs text-gray-500">No activity</span>
         </div>
       </div>

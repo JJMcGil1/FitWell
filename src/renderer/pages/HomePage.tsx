@@ -19,7 +19,7 @@ export const HomePage: React.FC = () => {
       {/* Welcome message */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900">
-          Hey, {currentUser.name}! 👋
+          Hey, {currentUser.name}!
         </h2>
         <p className="text-gray-500 mt-1">
           Let's keep that momentum going.

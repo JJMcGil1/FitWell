@@ -10,7 +10,7 @@
   }
 
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-gray-200 text-gray-900;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
@@ -33,7 +33,7 @@
 
   /* Card styles */
   .card {
-    @apply bg-white rounded-xl shadow-card border border-gray-100;
+    @apply bg-gray-50 rounded-xl shadow-lg shadow-gray-300/50 border border-gray-200;
   }
 
   /* Button base */
@@ -56,7 +56,7 @@
 
   /* Input styles */
   .input {
-    @apply block w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm;
+    @apply block w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm;
     @apply placeholder:text-gray-400;
     @apply focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500;
     @apply transition-colors duration-150;
@@ -74,7 +74,7 @@
   }
 
   .day-empty {
-    @apply bg-white text-gray-700 hover:bg-gray-50;
+    @apply bg-white/80 text-gray-700 hover:bg-gray-100 border border-gray-200/60;
   }
 
   .day-today {
@@ -98,6 +98,16 @@
   50% {
     filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.7));
   }
+}
+
+/* User switch transition */
+.user-content {
+  transition: opacity 150ms ease-out, transform 150ms ease-out;
+}
+
+.user-content.switching {
+  opacity: 0;
+  transform: scale(0.98) translateY(4px);
 }
 
 /* Scrollbar styling */

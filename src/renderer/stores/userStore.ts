@@ -16,6 +16,7 @@ interface UserState {
 
   // Loading states
   isLoading: boolean;
+  isSwitching: boolean;
   error: string | null;
 
   // Actions
@@ -32,6 +33,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   currentUser: null,
   settings: null,
   isLoading: true,
+  isSwitching: false,
   error: null,
 
   initialize: async () => {
@@ -62,7 +64,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   },
 
   switchUser: async (userId: string) => {
-    const { users } = get();
+    const { users, currentUser } = get();
     const user = users.find((u) => u.id === userId);
 
     if (!user) {
@@ -70,10 +72,26 @@ export const useUserStore = create<UserState>((set, get) => ({
       return;
     }
 
+    // Skip if same user
+    if (currentUser?.id === userId) return;
+
+    // Start exit animation
+    set({ isSwitching: true });
+
+    // Wait for exit animation
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // Switch the user
     set({ currentUser: user });
 
     // Persist the selection
     await window.api.updateSettings({ lastActiveUserId: userId });
+
+    // Wait for enter animation to complete
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // End transition
+    set({ isSwitching: false });
   },
 
   createUser: async (name: string, avatarColor: string) => {

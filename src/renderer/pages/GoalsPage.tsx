@@ -165,7 +165,11 @@ export const GoalsPage: React.FC = () => {
 
         {activeGoals.length === 0 ? (
           <div className="card p-8 text-center">
-            <div className="text-4xl mb-3">🎯</div>
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+              <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+              </svg>
+            </div>
             <p className="text-gray-500">No active goals yet</p>
             <p className="text-sm text-gray-400 mt-1">Create a goal to start tracking</p>
           </div>
@@ -196,7 +200,9 @@ export const GoalsPage: React.FC = () => {
                   {/* Streak */}
                   {streak && streak.currentStreak > 0 && (
                     <div className="flex items-center gap-1 text-orange-500">
-                      <span className="text-sm">🔥</span>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
                       <span className="text-sm font-medium">{streak.currentStreak}</span>
                     </div>
                   )}

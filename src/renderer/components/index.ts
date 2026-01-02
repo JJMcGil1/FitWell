@@ -6,4 +6,3 @@ export { LoadingScreen } from './LoadingScreen';
 export { Sidebar } from './Sidebar';
 export { StreakDisplay } from './StreakDisplay';
 export { TitleBar } from './TitleBar';
-export { UserSwitcher } from './UserSwitcher';

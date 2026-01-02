@@ -7,6 +7,7 @@
   "author": "Justin McGill",
   "license": "MIT",
   "scripts": {
+    "postinstall": "node scripts/patch-electron-name.js",
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "dev:vite": "vite",
     "dev:electron": "wait-on tcp:5173 && electron .",
