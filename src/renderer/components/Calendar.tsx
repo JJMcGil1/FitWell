@@ -68,84 +68,84 @@ export const Calendar: React.FC = () => {
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <div className="card p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-semibold text-gray-900">
-            {format(selectedMonth, 'MMMM yyyy')}
-          </h2>
+    <div className="h-full flex flex-col">
+      {/* Header - centered title with flanking navigation */}
+      <div className="flex items-center justify-between px-2 mb-8">
+        {/* Left arrow */}
+        <button
+          onClick={goToPreviousMonth}
+          className="p-2 -ml-2 rounded-full hover:bg-gray-300/50 dark:hover:bg-neutral-700/50 transition-colors"
+          aria-label="Previous month"
+        >
+          <svg
+            className="w-5 h-5 text-gray-500 dark:text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+        </button>
 
-          {/* Today button - only show if not in current month */}
+        {/* Centered title */}
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
+            {format(selectedMonth, 'MMMM yyyy')}
+          </h1>
+
+          {/* Today pill - only show if not in current month */}
           {!isSameMonth(selectedMonth, today) && (
             <button
               onClick={goToToday}
-              className="text-sm font-medium text-brand-500 hover:text-brand-600 transition-colors"
+              className="px-2.5 py-1 text-xs font-medium text-brand-600 bg-brand-50 dark:text-brand-400 dark:bg-brand-500/20 rounded-full hover:bg-brand-100 dark:hover:bg-brand-500/30 transition-colors"
             >
               Today
             </button>
           )}
         </div>
 
-        {/* Navigation */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={goToPreviousMonth}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            aria-label="Previous month"
+        {/* Right arrow */}
+        <button
+          onClick={goToNextMonth}
+          disabled={!canGoNext}
+          className="p-2 -mr-2 rounded-full hover:bg-gray-300/50 dark:hover:bg-neutral-700/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+          aria-label="Next month"
+        >
+          <svg
+            className="w-5 h-5 text-gray-500 dark:text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-            <svg
-              className="w-5 h-5 text-gray-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
-
-          <button
-            onClick={goToNextMonth}
-            disabled={!canGoNext}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            aria-label="Next month"
-          >
-            <svg
-              className="w-5 h-5 text-gray-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </button>
-        </div>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </button>
       </div>
 
       {/* Week day headers */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 mb-2">
         {weekDays.map((day) => (
           <div
             key={day}
-            className="text-center text-xs font-medium text-gray-400 py-2"
+            className="text-center text-[11px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider py-2"
           >
             {day}
           </div>
         ))}
       </div>
 
-      {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1">
+      {/* Calendar grid - fills remaining space */}
+      <div className="flex-1 grid grid-cols-7 gap-1 auto-rows-fr">
         {calendarDays.map((day) => (
           <CalendarDay
             key={day.toISOString()}
@@ -155,22 +155,6 @@ export const Calendar: React.FC = () => {
             isFuture={isAfter(day, today)}
           />
         ))}
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-6 mt-6 pt-4 border-t border-gray-200">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-success-500 shadow-sm" />
-          <span className="text-xs text-gray-500">Complete</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-brand-100 shadow-sm" />
-          <span className="text-xs text-gray-500">Partial</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-white border border-gray-200 shadow-sm" />
-          <span className="text-xs text-gray-500">No activity</span>
-        </div>
       </div>
     </div>
   );

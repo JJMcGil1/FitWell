@@ -3,3 +3,4 @@ export { useUserStore } from './userStore';
 export { useGoalStore } from './goalStore';
 export { useWeightStore } from './weightStore';
 export { useNavigationStore } from './navigationStore';
+export { useThemeStore } from './themeStore';

@@ -41,6 +41,27 @@ export function initDatabase(): Database.Database {
   // Run schema
   db.exec(SCHEMA);
 
+  // Run migrations for existing databases (add new columns if they don't exist)
+  const userColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
+  const columnNames = userColumns.map(c => c.name);
+
+  if (!columnNames.includes('first_name')) {
+    console.log('[Database] Migrating: Adding first_name column...');
+    db.exec('ALTER TABLE users ADD COLUMN first_name TEXT');
+  }
+  if (!columnNames.includes('last_name')) {
+    console.log('[Database] Migrating: Adding last_name column...');
+    db.exec('ALTER TABLE users ADD COLUMN last_name TEXT');
+  }
+  if (!columnNames.includes('birthday')) {
+    console.log('[Database] Migrating: Adding birthday column...');
+    db.exec('ALTER TABLE users ADD COLUMN birthday TEXT');
+  }
+  if (!columnNames.includes('profile_photo')) {
+    console.log('[Database] Migrating: Adding profile_photo column...');
+    db.exec('ALTER TABLE users ADD COLUMN profile_photo TEXT');
+  }
+
   // Check if we need to seed
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
   if (userCount.count === 0) {
@@ -72,24 +93,46 @@ export function closeDatabase(): void {
 
 export function getUsers(): User[] {
   const rows = getDatabase()
-    .prepare('SELECT id, name, avatar_color, created_at FROM users ORDER BY created_at')
-    .all() as Array<{ id: string; name: string; avatar_color: string; created_at: string }>;
+    .prepare('SELECT id, name, first_name, last_name, birthday, profile_photo, avatar_color, created_at FROM users ORDER BY created_at')
+    .all() as Array<{
+      id: string;
+      name: string;
+      first_name: string | null;
+      last_name: string | null;
+      birthday: string | null;
+      profile_photo: string | null;
+      avatar_color: string;
+      created_at: string;
+    }>;
 
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
+    firstName: row.first_name ?? undefined,
+    lastName: row.last_name ?? undefined,
+    birthday: row.birthday ?? undefined,
+    profilePhoto: row.profile_photo ?? undefined,
     avatarColor: row.avatar_color,
     createdAt: row.created_at,
   }));
 }
 
-export function createUser(name: string, avatarColor: string): User {
+interface CreateUserData {
+  firstName: string;
+  lastName: string;
+  birthday?: string;
+  profilePhoto?: string;
+  avatarColor: string;
+}
+
+export function createUser(data: CreateUserData): User {
   const id = `user_${uuidv4()}`;
   const now = new Date().toISOString();
+  const name = `${data.firstName} ${data.lastName}`.trim();
 
   getDatabase()
-    .prepare('INSERT INTO users (id, name, avatar_color, created_at) VALUES (?, ?, ?, ?)')
-    .run(id, name, avatarColor, now);
+    .prepare('INSERT INTO users (id, name, first_name, last_name, birthday, profile_photo, avatar_color, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(id, name, data.firstName, data.lastName, data.birthday ?? null, data.profilePhoto ?? null, data.avatarColor, now);
 
   // Create default workout goal for new user
   const goalId = `goal_${uuidv4()}`;
@@ -99,23 +142,65 @@ export function createUser(name: string, avatarColor: string): User {
     )
     .run(goalId, id, 'Workout', 'workout', 'daily', 1, now, now);
 
-  return { id, name, avatarColor, createdAt: now };
+  return {
+    id,
+    name,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    birthday: data.birthday,
+    profilePhoto: data.profilePhoto,
+    avatarColor: data.avatarColor,
+    createdAt: now,
+  };
 }
 
 export function updateUser(
   id: string,
-  updates: Partial<Pick<User, 'name' | 'avatarColor'>>
+  updates: Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'birthday' | 'profilePhoto' | 'avatarColor'>>
 ): User {
   const setClauses: string[] = [];
-  const values: (string | number)[] = [];
+  const values: (string | number | null)[] = [];
 
   if (updates.name !== undefined) {
     setClauses.push('name = ?');
     values.push(updates.name);
   }
+  if (updates.firstName !== undefined) {
+    setClauses.push('first_name = ?');
+    values.push(updates.firstName);
+  }
+  if (updates.lastName !== undefined) {
+    setClauses.push('last_name = ?');
+    values.push(updates.lastName);
+  }
+  if (updates.birthday !== undefined) {
+    setClauses.push('birthday = ?');
+    values.push(updates.birthday ?? null);
+  }
+  if (updates.profilePhoto !== undefined) {
+    setClauses.push('profile_photo = ?');
+    values.push(updates.profilePhoto ?? null);
+  }
   if (updates.avatarColor !== undefined) {
     setClauses.push('avatar_color = ?');
     values.push(updates.avatarColor);
+  }
+
+  // Auto-update name if first/last name changed
+  if (updates.firstName !== undefined || updates.lastName !== undefined) {
+    // Get current values to combine
+    const current = getDatabase()
+      .prepare('SELECT first_name, last_name FROM users WHERE id = ?')
+      .get(id) as { first_name: string | null; last_name: string | null };
+
+    const firstName = updates.firstName ?? current.first_name ?? '';
+    const lastName = updates.lastName ?? current.last_name ?? '';
+    const newName = `${firstName} ${lastName}`.trim();
+
+    if (!setClauses.includes('name = ?')) {
+      setClauses.push('name = ?');
+      values.push(newName);
+    }
   }
 
   if (setClauses.length === 0) {
@@ -128,12 +213,25 @@ export function updateUser(
     .run(...values);
 
   const row = getDatabase()
-    .prepare('SELECT id, name, avatar_color, created_at FROM users WHERE id = ?')
-    .get(id) as { id: string; name: string; avatar_color: string; created_at: string };
+    .prepare('SELECT id, name, first_name, last_name, birthday, profile_photo, avatar_color, created_at FROM users WHERE id = ?')
+    .get(id) as {
+      id: string;
+      name: string;
+      first_name: string | null;
+      last_name: string | null;
+      birthday: string | null;
+      profile_photo: string | null;
+      avatar_color: string;
+      created_at: string;
+    };
 
   return {
     id: row.id,
     name: row.name,
+    firstName: row.first_name ?? undefined,
+    lastName: row.last_name ?? undefined,
+    birthday: row.birthday ?? undefined,
+    profilePhoto: row.profile_photo ?? undefined,
     avatarColor: row.avatar_color,
     createdAt: row.created_at,
   };

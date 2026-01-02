@@ -73,8 +73,8 @@ export const GoalsPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Goals</h2>
-          <p className="text-gray-500 mt-1">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Goals</h2>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
             Manage your fitness goals
           </p>
         </div>
@@ -93,11 +93,11 @@ export const GoalsPage: React.FC = () => {
       {/* Create goal form */}
       {isCreating && (
         <div className="card p-5 mb-6 animate-fade-in">
-          <h3 className="text-sm font-medium text-gray-700 mb-4">Create New Goal</h3>
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Create New Goal</h3>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1.5">
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                 Goal Name
               </label>
               <input
@@ -111,7 +111,7 @@ export const GoalsPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1.5">
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                 Goal Type
               </label>
               <div className="flex gap-2">
@@ -123,8 +123,8 @@ export const GoalsPage: React.FC = () => {
                       flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium
                       transition-all duration-150
                       ${newGoalType === type
-                        ? 'border-brand-500 bg-brand-50 text-brand-700'
-                        : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                        ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
+                        : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-neutral-600 dark:bg-neutral-700 dark:text-gray-300 dark:hover:bg-neutral-600'
                       }
                     `}
                   >
@@ -159,19 +159,19 @@ export const GoalsPage: React.FC = () => {
 
       {/* Active Goals */}
       <div className="mb-8">
-        <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">
+        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
           Active Goals ({activeGoals.length})
         </h3>
 
         {activeGoals.length === 0 ? (
           <div className="card p-8 text-center">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-              <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 dark:bg-neutral-700 flex items-center justify-center">
+              <svg className="w-6 h-6 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
               </svg>
             </div>
-            <p className="text-gray-500">No active goals yet</p>
-            <p className="text-sm text-gray-400 mt-1">Create a goal to start tracking</p>
+            <p className="text-gray-500 dark:text-gray-400">No active goals yet</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Create a goal to start tracking</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -183,16 +183,16 @@ export const GoalsPage: React.FC = () => {
                   className="card p-4 flex items-center gap-4"
                 >
                   {/* Icon */}
-                  <div className="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center text-brand-500">
+                  <div className="w-10 h-10 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center text-brand-500 dark:text-brand-400">
                     {getGoalTypeIcon(goal.type)}
                   </div>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-semibold text-gray-900 truncate">
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                       {goal.name}
                     </h4>
-                    <p className="text-xs text-gray-500 capitalize">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
                       {goal.type} • {goal.frequency}
                     </p>
                   </div>
@@ -211,7 +211,7 @@ export const GoalsPage: React.FC = () => {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleToggleActive(goal)}
-                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
                       title="Pause goal"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -220,7 +220,7 @@ export const GoalsPage: React.FC = () => {
                     </button>
                     <button
                       onClick={() => handleDelete(goal.id)}
-                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       title="Delete goal"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -238,7 +238,7 @@ export const GoalsPage: React.FC = () => {
       {/* Inactive Goals */}
       {inactiveGoals.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-4">
+          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
             Paused Goals ({inactiveGoals.length})
           </h3>
 
@@ -249,16 +249,16 @@ export const GoalsPage: React.FC = () => {
                 className="card p-4 flex items-center gap-4 opacity-60"
               >
                 {/* Icon */}
-                <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400">
+                <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-neutral-700 flex items-center justify-center text-gray-400 dark:text-gray-500">
                   {getGoalTypeIcon(goal.type)}
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-gray-700 truncate">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">
                     {goal.name}
                   </h4>
-                  <p className="text-xs text-gray-400 capitalize">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 capitalize">
                     {goal.type} • Paused
                   </p>
                 </div>
@@ -267,7 +267,7 @@ export const GoalsPage: React.FC = () => {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleToggleActive(goal)}
-                    className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                    className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
                     title="Resume goal"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -277,7 +277,7 @@ export const GoalsPage: React.FC = () => {
                   </button>
                   <button
                     onClick={() => handleDelete(goal.id)}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                     title="Delete goal"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

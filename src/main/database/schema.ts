@@ -17,6 +17,10 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
+  first_name TEXT,
+  last_name TEXT,
+  birthday TEXT,
+  profile_photo TEXT,
   avatar_color TEXT NOT NULL DEFAULT '#6366f1',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -88,20 +92,5 @@ CREATE INDEX IF NOT EXISTS idx_daily_logs_goal_date ON daily_logs(goal_id, date)
 CREATE INDEX IF NOT EXISTS idx_weight_entries_user_date ON weight_entries(user_id, date);
 `;
 
-export const SEED_DATA = `
--- Seed initial users: Justin and Aimee
-INSERT OR IGNORE INTO users (id, name, avatar_color) VALUES
-  ('user_justin', 'Justin', '#6366f1'),
-  ('user_aimee', 'Aimee', '#ec4899');
-
--- Seed default goals for Justin
-INSERT OR IGNORE INTO goals (id, user_id, name, type, frequency, is_active) VALUES
-  ('goal_justin_workout', 'user_justin', 'Workout', 'workout', 'daily', 1);
-
--- Seed default goals for Aimee
-INSERT OR IGNORE INTO goals (id, user_id, name, type, frequency, is_active) VALUES
-  ('goal_aimee_workout', 'user_aimee', 'Workout', 'workout', 'daily', 1);
-
--- Set Justin as default active user
-UPDATE settings SET last_active_user_id = 'user_justin' WHERE id = 1;
-`;
+// No seed data needed - users create their own profiles on first launch
+export const SEED_DATA = ``;

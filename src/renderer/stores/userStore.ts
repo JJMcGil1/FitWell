@@ -6,7 +6,7 @@
  */
 
 import { create } from 'zustand';
-import type { User, AppSettings } from '../../shared/types';
+import type { User, AppSettings, CreateUserData } from '../../shared/types';
 
 interface UserState {
   // Data
@@ -22,8 +22,8 @@ interface UserState {
   // Actions
   initialize: () => Promise<void>;
   switchUser: (userId: string) => Promise<void>;
-  createUser: (name: string, avatarColor: string) => Promise<User>;
-  updateUser: (id: string, updates: Partial<Pick<User, 'name' | 'avatarColor'>>) => Promise<void>;
+  createUser: (data: CreateUserData) => Promise<User>;
+  updateUser: (id: string, updates: Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'birthday' | 'profilePhoto' | 'avatarColor'>>) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
   updateSettings: (settings: Partial<AppSettings>) => Promise<void>;
 }
@@ -94,8 +94,8 @@ export const useUserStore = create<UserState>((set, get) => ({
     set({ isSwitching: false });
   },
 
-  createUser: async (name: string, avatarColor: string) => {
-    const newUser = await window.api.createUser(name, avatarColor);
+  createUser: async (data: CreateUserData) => {
+    const newUser = await window.api.createUser(data);
     set((state) => ({ users: [...state.users, newUser] }));
     return newUser;
   },
@@ -111,16 +111,11 @@ export const useUserStore = create<UserState>((set, get) => ({
   deleteUser: async (id: string) => {
     const { users, currentUser } = get();
 
-    // Don't allow deleting if only one user
-    if (users.length <= 1) {
-      throw new Error('Cannot delete the last user');
-    }
-
     await window.api.deleteUser(id);
 
     const remainingUsers = users.filter((u) => u.id !== id);
     const newCurrentUser =
-      currentUser?.id === id ? remainingUsers[0] : currentUser;
+      currentUser?.id === id ? (remainingUsers[0] || null) : currentUser;
 
     set({
       users: remainingUsers,
@@ -128,8 +123,8 @@ export const useUserStore = create<UserState>((set, get) => ({
     });
 
     // Update settings if current user changed
-    if (currentUser?.id === id && newCurrentUser) {
-      await window.api.updateSettings({ lastActiveUserId: newCurrentUser.id });
+    if (currentUser?.id === id) {
+      await window.api.updateSettings({ lastActiveUserId: newCurrentUser?.id || null });
     }
   },
 

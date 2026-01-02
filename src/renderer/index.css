@@ -11,7 +11,15 @@
 
   body {
     @apply bg-gray-200 text-gray-900;
+    @apply dark:bg-neutral-900 dark:text-gray-100;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Reset default focus styles - we use custom focus-visible styles */
+  button:focus,
+  a:focus,
+  [role="button"]:focus {
+    outline: none;
   }
 
   /* Electron drag region for custom title bar */
@@ -34,6 +42,7 @@
   /* Card styles */
   .card {
     @apply bg-gray-50 rounded-xl shadow-lg shadow-gray-300/50 border border-gray-200;
+    @apply dark:bg-neutral-800 dark:shadow-black/20 dark:border-neutral-700;
   }
 
   /* Button base */
@@ -48,10 +57,12 @@
 
   .btn-secondary {
     @apply btn bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500;
+    @apply dark:bg-neutral-700 dark:text-gray-200 dark:hover:bg-neutral-600;
   }
 
   .btn-ghost {
     @apply btn bg-transparent text-gray-600 hover:bg-gray-100 focus:ring-gray-500;
+    @apply dark:text-gray-400 dark:hover:bg-neutral-800;
   }
 
   /* Input styles */
@@ -60,6 +71,7 @@
     @apply placeholder:text-gray-400;
     @apply focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500;
     @apply transition-colors duration-150;
+    @apply dark:bg-neutral-800 dark:border-neutral-700 dark:text-gray-100 dark:placeholder:text-gray-500;
   }
 }
 
@@ -122,8 +134,10 @@
 
 ::-webkit-scrollbar-thumb {
   @apply bg-gray-300 rounded-full;
+  @apply dark:bg-neutral-600;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-400;
+  @apply dark:bg-neutral-500;
 }

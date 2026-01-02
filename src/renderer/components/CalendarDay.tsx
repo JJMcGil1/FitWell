@@ -2,7 +2,7 @@
  * CalendarDay Component
  *
  * Individual day cell in the calendar.
- * Shows completion status and handles click to toggle.
+ * Minimal design - the number is the focus.
  */
 
 import React, { useState } from 'react';
@@ -34,33 +34,13 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
   const activeGoals = goals.filter((g) => g.isActive);
   const hasGoals = activeGoals.length > 0;
 
-  // Determine visual state
-  const getStateClasses = () => {
-    if (!isCurrentMonth) {
-      return 'bg-gray-50/50 text-gray-300';
-    }
-    if (isFuture) {
-      return 'bg-gray-50 text-gray-300 cursor-not-allowed';
-    }
-    if (status.isFullyComplete) {
-      return 'bg-success-500 text-white hover:bg-success-600';
-    }
-    if (status.completedGoals.length > 0) {
-      return 'bg-brand-100 text-brand-700 hover:bg-brand-200';
-    }
-    return 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-100';
-  };
+  const isInteractive = isCurrentMonth && !isFuture && hasGoals;
 
   const handleClick = async () => {
-    if (isFuture || !isCurrentMonth || !currentUser || !hasGoals || isToggling) {
-      return;
-    }
+    if (!isInteractive || !currentUser || isToggling) return;
 
     setIsToggling(true);
-
     try {
-      // Toggle the first active goal for simplicity
-      // In a more complex app, this could open a modal to select which goal
       const primaryGoal = activeGoals[0];
       await toggleDay(currentUser.id, primaryGoal.id, dateStr);
     } catch (error) {
@@ -70,34 +50,62 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
     }
   };
 
+  // Build class list based on state
+  const getCellClasses = () => {
+    const base = 'relative flex items-center justify-center rounded-2xl transition-all duration-150';
+
+    // Non-current month - very subtle
+    if (!isCurrentMonth) {
+      return `${base} text-gray-300 dark:text-neutral-600`;
+    }
+
+    // Future dates - subtle but visible
+    if (isFuture) {
+      return `${base} text-gray-400 dark:text-neutral-500 cursor-default`;
+    }
+
+    // Completed state - soft green
+    if (status.isFullyComplete) {
+      return `${base} bg-emerald-500 text-white cursor-pointer hover:bg-emerald-600 active:scale-95`;
+    }
+
+    // Partial completion - subtle brand tint
+    if (status.completedGoals.length > 0) {
+      return `${base} bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-400 cursor-pointer hover:bg-brand-200 dark:hover:bg-brand-500/30 active:scale-95`;
+    }
+
+    // Default actionable day - transparent with hover
+    return `${base} text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200/60 dark:hover:bg-neutral-700/60 active:scale-95`;
+  };
+
   return (
     <button
       onClick={handleClick}
-      disabled={isFuture || !isCurrentMonth || isToggling}
-      className={`
-        relative aspect-square rounded-lg flex flex-col items-center justify-center
-        transition-all duration-150 ease-out
-        ${getStateClasses()}
-        ${isToday ? 'ring-2 ring-brand-500 ring-offset-2' : ''}
-        ${isToggling ? 'scale-95 opacity-70' : ''}
-        ${!isFuture && isCurrentMonth && hasGoals ? 'cursor-pointer' : ''}
-      `}
-      aria-label={`${format(date, 'MMMM d, yyyy')}${
-        status.isFullyComplete ? ' - Complete' : ''
-      }`}
+      disabled={!isInteractive || isToggling}
+      className={`${getCellClasses()} ${isToggling ? 'opacity-60 scale-95' : ''}`}
+      aria-label={`${format(date, 'MMMM d, yyyy')}${status.isFullyComplete ? ' - Complete' : ''}`}
     >
+      {/* Today indicator - subtle circle behind number */}
+      {isToday && !status.isFullyComplete && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full bg-gray-900 dark:bg-gray-100" />
+        </div>
+      )}
+
       {/* Day number */}
       <span
-        className={`text-sm font-medium ${
-          status.isFullyComplete ? 'font-semibold' : ''
-        }`}
+        className={`
+          relative z-10 text-[15px] font-medium tabular-nums
+          ${isToday && !status.isFullyComplete ? 'text-white dark:text-gray-900 font-semibold' : ''}
+          ${status.isFullyComplete ? 'font-semibold' : ''}
+        `}
       >
         {dayNum}
       </span>
 
-      {/* Completion indicator dots (for multiple goals) */}
+      {/* Completion dots for multiple goals */}
       {isCurrentMonth && !isFuture && activeGoals.length > 1 && (
-        <div className="flex gap-0.5 mt-1">
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
           {activeGoals.map((goal) => {
             const isComplete = status.completedGoals.includes(goal.id);
             return (
@@ -105,10 +113,8 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
                 key={goal.id}
                 className={`w-1 h-1 rounded-full ${
                   isComplete
-                    ? status.isFullyComplete
-                      ? 'bg-white/80'
-                      : 'bg-brand-500'
-                    : 'bg-gray-300'
+                    ? status.isFullyComplete ? 'bg-white/70' : 'bg-brand-500'
+                    : 'bg-gray-300 dark:bg-neutral-600'
                 }`}
               />
             );
@@ -116,27 +122,10 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
         </div>
       )}
 
-      {/* Check mark for complete days */}
-      {status.isFullyComplete && activeGoals.length === 1 && (
-        <svg
-          className="absolute w-3 h-3 bottom-1.5 right-1.5 text-white/90"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={3}
-            d="M5 13l4 4L19 7"
-          />
-        </svg>
-      )}
-
-      {/* Loading state */}
+      {/* Loading spinner */}
       {isToggling && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-lg">
-          <div className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin opacity-50" />
         </div>
       )}
     </button>

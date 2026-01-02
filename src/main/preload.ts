@@ -9,12 +9,12 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type { IpcApi, Goal, DailyLog, WeightEntry, AppSettings } from '../shared/types';
+import type { IpcApi, Goal, DailyLog, WeightEntry, AppSettings, CreateUserData } from '../shared/types';
 
 const api: IpcApi = {
   // User operations
   getUsers: () => ipcRenderer.invoke('users:getAll'),
-  createUser: (name, avatarColor) => ipcRenderer.invoke('users:create', name, avatarColor),
+  createUser: (data: CreateUserData) => ipcRenderer.invoke('users:create', data),
   updateUser: (id, updates) => ipcRenderer.invoke('users:update', id, updates),
   deleteUser: (id) => ipcRenderer.invoke('users:delete', id),
 

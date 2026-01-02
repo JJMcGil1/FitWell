@@ -18,13 +18,13 @@ export function registerIpcHandlers(): void {
     return db.getUsers();
   });
 
-  ipcMain.handle('users:create', (_, name: string, avatarColor: string) => {
-    return db.createUser(name, avatarColor);
+  ipcMain.handle('users:create', (_, data: { firstName: string; lastName: string; birthday?: string; profilePhoto?: string; avatarColor: string }) => {
+    return db.createUser(data);
   });
 
   ipcMain.handle(
     'users:update',
-    (_, id: string, updates: Partial<{ name: string; avatarColor: string }>) => {
+    (_, id: string, updates: Partial<{ name: string; firstName: string; lastName: string; birthday: string; profilePhoto: string; avatarColor: string }>) => {
       return db.updateUser(id, updates);
     }
   );

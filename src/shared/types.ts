@@ -11,7 +11,11 @@
 
 export interface User {
   id: string;
-  name: string;
+  name: string; // Full display name (first + last)
+  firstName?: string;
+  lastName?: string;
+  birthday?: string; // YYYY-MM-DD format
+  profilePhoto?: string; // Base64 data URL or null
   avatarColor: string; // Hex color for avatar background
   createdAt: string; // ISO date string
 }
@@ -84,11 +88,19 @@ export interface MonthSummary {
 // IPC API Types
 // ============================================
 
+export interface CreateUserData {
+  firstName: string;
+  lastName: string;
+  birthday?: string;
+  profilePhoto?: string;
+  avatarColor: string;
+}
+
 export interface IpcApi {
   // User operations
   getUsers: () => Promise<User[]>;
-  createUser: (name: string, avatarColor: string) => Promise<User>;
-  updateUser: (id: string, updates: Partial<Pick<User, 'name' | 'avatarColor'>>) => Promise<User>;
+  createUser: (data: CreateUserData) => Promise<User>;
+  updateUser: (id: string, updates: Partial<Pick<User, 'name' | 'firstName' | 'lastName' | 'birthday' | 'profilePhoto' | 'avatarColor'>>) => Promise<User>;
   deleteUser: (id: string) => Promise<void>;
 
   // Goal operations
