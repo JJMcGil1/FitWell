@@ -137,12 +137,29 @@ export interface AppSettings {
 }
 
 // ============================================
+// Updater API Types
+// ============================================
+
+export interface UpdaterApi {
+  checkForUpdates: () => Promise<unknown>;
+  downloadUpdate: () => Promise<unknown>;
+  installUpdate: () => void;
+  onUpdateChecking: (callback: () => void) => () => void;
+  onUpdateAvailable: (callback: (info: { version: string }) => void) => () => void;
+  onUpdateNotAvailable: (callback: () => void) => () => void;
+  onDownloadProgress: (callback: (progress: { percent: number }) => void) => () => void;
+  onUpdateDownloaded: (callback: (info: { version: string }) => void) => () => void;
+  onError: (callback: (error: string) => void) => () => void;
+}
+
+// ============================================
 // Window API Declaration
 // ============================================
 
 declare global {
   interface Window {
     api: IpcApi;
+    updater: UpdaterApi;
   }
 }
 

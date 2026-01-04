@@ -11,7 +11,7 @@ import { useGoalStore } from './stores/goalStore';
 import { useWeightStore } from './stores/weightStore';
 import { useNavigationStore } from './stores/navigationStore';
 import { useThemeStore } from './stores/themeStore';
-import { Sidebar, LoadingScreen, Onboarding } from './components';
+import { Sidebar, LoadingScreen, Onboarding, UpdateNotification } from './components';
 import { CalendarPage, WorkoutsPage, RunningPage, GoalsPage, SettingsPage } from './pages';
 
 // ⚠️ DEV FLAG: Set to true to force show onboarding screen for development
@@ -109,6 +109,9 @@ const App: React.FC = () => {
       <main className={`flex-1 overflow-y-auto min-w-0 user-content ${isSwitching ? 'switching' : ''}`}>
         {renderPage()}
       </main>
+
+      {/* Update notification in bottom right */}
+      <UpdateNotification />
     </div>
   );
 };

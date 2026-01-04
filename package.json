@@ -1,6 +1,6 @@
 {
   "name": "fitwell",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Personal fitness tracking app for Justin & Aimee",
   "main": "dist/main/main.js",
   "type": "commonjs",
@@ -22,6 +22,7 @@
     "better-sqlite3": "^11.6.0",
     "date-fns": "^4.1.0",
     "electron-store": "^10.0.0",
+    "electron-updater": "^6.6.2",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "uuid": "^11.0.3",
@@ -55,8 +56,16 @@
       "dist/**/*",
       "package.json"
     ],
+    "publish": {
+      "provider": "github",
+      "owner": "JJMcGil1",
+      "repo": "FitWell"
+    },
     "mac": {
-      "target": "dmg",
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "assets/icon.icns"
     },
     "win": {

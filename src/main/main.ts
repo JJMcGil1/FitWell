@@ -5,10 +5,11 @@
  * Handles window creation, lifecycle, and process coordination.
  */
 
-import { app, BrowserWindow, shell, nativeImage } from 'electron';
+import { app, BrowserWindow, shell, nativeImage, ipcMain } from 'electron';
 import path from 'path';
 import { initDatabase, closeDatabase } from './database';
 import { registerIpcHandlers } from './ipc/handlers';
+import { autoUpdater } from 'electron-updater';
 
 // Set app name for dock display (critical for dev mode where Electron binary is used)
 app.setName('FitWell');
@@ -69,6 +70,58 @@ async function createWindow(): Promise<void> {
   }
 }
 
+// Auto-updater setup
+function setupAutoUpdater(): void {
+  // Don't check for updates in dev mode
+  if (isDev) return;
+
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('checking-for-update', () => {
+    mainWindow?.webContents.send('updater:checking');
+  });
+
+  autoUpdater.on('update-available', (info: { version: string }) => {
+    mainWindow?.webContents.send('updater:available', info);
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    mainWindow?.webContents.send('updater:not-available');
+  });
+
+  autoUpdater.on('download-progress', (progress: { percent: number }) => {
+    mainWindow?.webContents.send('updater:progress', progress);
+  });
+
+  autoUpdater.on('update-downloaded', (info: { version: string }) => {
+    mainWindow?.webContents.send('updater:downloaded', info);
+  });
+
+  autoUpdater.on('error', (error: Error) => {
+    mainWindow?.webContents.send('updater:error', error.message);
+  });
+
+  // Check for updates after a short delay
+  setTimeout(() => {
+    autoUpdater.checkForUpdates();
+  }, 3000);
+}
+
+// IPC handlers for updater
+ipcMain.handle('updater:check', async () => {
+  if (isDev) return { updateAvailable: false };
+  return autoUpdater.checkForUpdates();
+});
+
+ipcMain.handle('updater:download', async () => {
+  return autoUpdater.downloadUpdate();
+});
+
+ipcMain.handle('updater:install', () => {
+  autoUpdater.quitAndInstall();
+});
+
 // App lifecycle
 app.whenReady().then(() => {
   // Set dock icon on macOS (both dev and prod)
@@ -81,6 +134,7 @@ app.whenReady().then(() => {
   }
 
   createWindow();
+  setupAutoUpdater();
 });
 
 app.on('window-all-closed', () => {
