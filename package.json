@@ -11,7 +11,7 @@
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "dev:vite": "vite",
     "dev:electron": "wait-on tcp:5173 && electron .",
-    "build": "tsc && vite build && electron-builder",
+    "build": "tsc -p tsconfig.main.json && vite build && electron-builder",
     "build:vite": "vite build",
     "build:electron": "tsc -p tsconfig.main.json",
     "preview": "vite preview",
