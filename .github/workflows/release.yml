@@ -15,23 +15,53 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from package.json
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Check if release already exists
+        id: check_release
+        run: |
+          if git tag -l "v${{ steps.version.outputs.version }}" | grep -q .; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Setup Node.js
+        if: steps.check_release.outputs.exists == 'false'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
+        if: steps.check_release.outputs.exists == 'false'
         run: npm ci
 
-      - name: Build and Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build -- --publish always
+      - name: Build app
+        if: steps.check_release.outputs.exists == 'false'
+        run: npm run build -- --publish never
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - name: Create GitHub Release
+        if: steps.check_release.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
         with:
-          name: release-files
-          path: release/*.dmg
+          tag_name: v${{ steps.version.outputs.version }}
+          name: FitWell v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            release/*.dmg
+            release/*.zip
+            release/*.blockmap
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Skip message
+        if: steps.check_release.outputs.exists == 'true'
+        run: echo "Release v${{ steps.version.outputs.version }} already exists. Bump version in package.json to create a new release."
