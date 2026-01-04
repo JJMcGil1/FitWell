@@ -106,6 +106,11 @@ function setupAutoUpdater(): void {
   setTimeout(() => {
     autoUpdater.checkForUpdates();
   }, 3000);
+
+  // Also check periodically every 30 minutes while app is running
+  setInterval(() => {
+    autoUpdater.checkForUpdates();
+  }, 30 * 60 * 1000);
 }
 
 // IPC handlers for updater
