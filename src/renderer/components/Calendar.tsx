@@ -5,7 +5,7 @@
  * Inspired by GitHub contribution graph meets Apple Health.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import {
   format,
   startOfMonth,
@@ -23,9 +23,13 @@ import { useGoalStore } from '../stores/goalStore';
 import { useUserStore } from '../stores/userStore';
 import { CalendarDay } from './CalendarDay';
 
+type SlideDirection = 'left' | 'right' | null;
+
 export const Calendar: React.FC = () => {
   const { currentUser } = useUserStore();
   const { selectedMonth, setSelectedMonth, fetchLogsForMonth } = useGoalStore();
+  const [slideDirection, setSlideDirection] = useState<SlideDirection>(null);
+  const animationKey = useRef(0);
 
   const today = new Date();
 
@@ -39,8 +43,10 @@ export const Calendar: React.FC = () => {
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
   }, [selectedMonth]);
 
-  // Navigation handlers
+  // Navigation handlers with directional animation
   const goToPreviousMonth = async () => {
+    setSlideDirection('right'); // Content slides right (coming from left)
+    animationKey.current += 1;
     const newMonth = subMonths(selectedMonth, 1);
     setSelectedMonth(newMonth);
     if (currentUser) {
@@ -49,6 +55,8 @@ export const Calendar: React.FC = () => {
   };
 
   const goToNextMonth = async () => {
+    setSlideDirection('left'); // Content slides left (coming from right)
+    animationKey.current += 1;
     const newMonth = addMonths(selectedMonth, 1);
     setSelectedMonth(newMonth);
     if (currentUser) {
@@ -57,6 +65,10 @@ export const Calendar: React.FC = () => {
   };
 
   const goToToday = async () => {
+    // Determine direction based on whether today is before or after current month
+    const isGoingBack = isAfter(selectedMonth, today);
+    setSlideDirection(isGoingBack ? 'right' : 'left');
+    animationKey.current += 1;
     setSelectedMonth(today);
     if (currentUser) {
       await fetchLogsForMonth(currentUser.id, today);
@@ -93,17 +105,39 @@ export const Calendar: React.FC = () => {
         </button>
 
         {/* Centered title */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
             {format(selectedMonth, 'MMMM yyyy')}
           </h1>
 
-          {/* Today pill - only show if not in current month */}
+          {/* Today button - only show if not in current month */}
           {!isSameMonth(selectedMonth, today) && (
             <button
               onClick={goToToday}
-              className="px-2.5 py-1 text-xs font-medium text-brand-600 bg-brand-50 dark:text-brand-400 dark:bg-brand-500/20 rounded-full hover:bg-brand-100 dark:hover:bg-brand-500/30 transition-colors"
+              className="
+                flex items-center gap-1.5 px-2.5 py-1
+                bg-gray-900 dark:bg-white
+                text-white dark:text-gray-900
+                text-xs font-medium
+                rounded-full
+                hover:bg-gray-700 dark:hover:bg-gray-100
+                active:scale-95
+                transition-all duration-150
+              "
             >
+              <svg
+                className="w-3 h-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
+                />
+              </svg>
               Today
             </button>
           )}
@@ -144,18 +178,29 @@ export const Calendar: React.FC = () => {
         ))}
       </div>
 
-      {/* Calendar grid - fills remaining space */}
-      <div className="flex-1 grid grid-cols-7 gap-1 auto-rows-fr">
-        {calendarDays.map((day) => (
-          <CalendarDay
-            key={day.toISOString()}
-            date={day}
-            isCurrentMonth={isSameMonth(day, selectedMonth)}
-            isToday={isSameDay(day, today)}
-            isFuture={isAfter(day, today)}
-          />
-        ))}
+      {/* Calendar grid - fills remaining space with slide animation */}
+      <div className="flex-1 overflow-hidden">
+        <div
+          key={animationKey.current}
+          className={`
+            h-full grid grid-cols-7 gap-1 auto-rows-fr
+            ${slideDirection === 'left' ? 'animate-slide-in-left' : ''}
+            ${slideDirection === 'right' ? 'animate-slide-in-right' : ''}
+          `}
+          onAnimationEnd={() => setSlideDirection(null)}
+        >
+          {calendarDays.map((day) => (
+            <CalendarDay
+              key={day.toISOString()}
+              date={day}
+              isCurrentMonth={isSameMonth(day, selectedMonth)}
+              isToday={isSameDay(day, today)}
+              isFuture={isAfter(day, today)}
+            />
+          ))}
+        </div>
       </div>
+
     </div>
   );
 };
