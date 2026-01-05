@@ -46,6 +46,28 @@ jobs:
         if: steps.check_release.outputs.exists == 'false'
         run: npm run build -- --publish never
 
+      - name: Generate latest-mac.yml
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          ZIP_FILE=$(ls release/*-mac.zip | head -1)
+          ZIP_NAME=$(basename "$ZIP_FILE")
+          ZIP_SIZE=$(stat -f%z "$ZIP_FILE")
+          ZIP_SHA512=$(shasum -a 512 "$ZIP_FILE" | awk '{print $1}' | xxd -r -p | base64)
+
+          cat > release/latest-mac.yml << EOF
+          version: ${VERSION}
+          files:
+            - url: ${ZIP_NAME}
+              sha512: ${ZIP_SHA512}
+              size: ${ZIP_SIZE}
+          path: ${ZIP_NAME}
+          sha512: ${ZIP_SHA512}
+          releaseDate: $(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+          EOF
+
+          cat release/latest-mac.yml
+
       - name: Create GitHub Release
         if: steps.check_release.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
@@ -58,6 +80,7 @@ jobs:
             release/*.dmg
             release/*.zip
             release/*.blockmap
+            release/latest-mac.yml
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
