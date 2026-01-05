@@ -29,6 +29,7 @@ try {
 }
 
 let mainWindow: BrowserWindow | null = null;
+let downloadedFilePath: string | null = null;
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
@@ -98,7 +99,28 @@ function setupAutoUpdater(): void {
     mainWindow?.webContents.send('updater:progress', progress);
   });
 
-  autoUpdater.on('update-downloaded', (info: { version: string }) => {
+  autoUpdater.on('update-downloaded', async (info: { version: string; downloadedFile?: string }) => {
+    // Store the downloaded file path for later
+    if (info.downloadedFile) {
+      downloadedFilePath = info.downloadedFile;
+      console.log('Update downloaded to:', downloadedFilePath);
+
+      // Immediately clear quarantine on the downloaded file
+      if (process.platform === 'darwin') {
+        try {
+          console.log('Clearing quarantine on downloaded update...');
+          await execAsync(`xattr -cr "${downloadedFilePath}" 2>/dev/null || true`);
+
+          // Also clear on the directory containing it
+          const downloadDir = downloadedFilePath.substring(0, downloadedFilePath.lastIndexOf('/'));
+          await execAsync(`xattr -cr "${downloadDir}" 2>/dev/null || true`);
+
+          console.log('Quarantine cleared on downloaded update');
+        } catch (err) {
+          console.error('Error clearing quarantine on download:', err);
+        }
+      }
+    }
     mainWindow?.webContents.send('updater:downloaded', info);
   });
 
@@ -131,24 +153,29 @@ ipcMain.handle('updater:install', async () => {
   // On macOS, clear quarantine attribute before installing
   if (process.platform === 'darwin') {
     try {
-      // Clear quarantine on the app and the update cache
-      const appPath = app.getPath('exe').replace(/\/Contents\/MacOS\/.*$/, '');
-      const cachePath = app.getPath('userData').replace(/\/Application Support\/.*$/, '/Caches');
+      console.log('Clearing quarantine for update installation...');
 
-      console.log('Clearing quarantine for update...');
-      console.log('App path:', appPath);
-      console.log('Cache path:', cachePath);
+      // Clear on the specific downloaded file if we have it
+      if (downloadedFilePath) {
+        console.log('Clearing quarantine on:', downloadedFilePath);
+        await execAsync(`xattr -cr "${downloadedFilePath}" 2>/dev/null || true`);
+        const downloadDir = downloadedFilePath.substring(0, downloadedFilePath.lastIndexOf('/'));
+        await execAsync(`xattr -cr "${downloadDir}" 2>/dev/null || true`);
+      }
 
-      // Clear quarantine on common update locations
-      await execAsync(`xattr -cr "${appPath}" 2>/dev/null || true`);
-      await execAsync(`xattr -cr "${cachePath}" 2>/dev/null || true`);
-      await execAsync(`xattr -cr ~/Library/Caches/com.fitwell* 2>/dev/null || true`);
-      await execAsync(`xattr -cr /tmp/com.fitwell* 2>/dev/null || true`);
+      // Also clear common update cache locations
+      const userDataPath = app.getPath('userData');
+      const cachePath = userDataPath.replace(/\/Application Support\/.*$/, '/Caches');
+
+      await execAsync(`xattr -cr "${cachePath}/fitwell-updater" 2>/dev/null || true`);
+      await execAsync(`xattr -cr "${cachePath}/com.fitwell"* 2>/dev/null || true`);
+      await execAsync(`xattr -cr ~/Library/Caches/fitwell-updater 2>/dev/null || true`);
+      await execAsync(`xattr -cr /var/folders/*/*/com.fitwell* 2>/dev/null || true`);
+      await execAsync(`xattr -cr /private/var/folders/*/*/T/com.fitwell* 2>/dev/null || true`);
 
       console.log('Quarantine cleared, proceeding with install');
     } catch (err) {
       console.error('Error clearing quarantine:', err);
-      // Continue anyway - might still work
     }
   }
 
