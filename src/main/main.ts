@@ -7,9 +7,13 @@
 
 import { app, BrowserWindow, shell, nativeImage, ipcMain } from 'electron';
 import path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { initDatabase, closeDatabase } from './database';
 import { registerIpcHandlers } from './ipc/handlers';
 import { autoUpdater } from 'electron-updater';
+
+const execAsync = promisify(exec);
 
 // Set app name for dock display (critical for dev mode where Electron binary is used)
 app.setName('FitWell');
@@ -123,7 +127,31 @@ ipcMain.handle('updater:download', async () => {
   return autoUpdater.downloadUpdate();
 });
 
-ipcMain.handle('updater:install', () => {
+ipcMain.handle('updater:install', async () => {
+  // On macOS, clear quarantine attribute before installing
+  if (process.platform === 'darwin') {
+    try {
+      // Clear quarantine on the app and the update cache
+      const appPath = app.getPath('exe').replace(/\/Contents\/MacOS\/.*$/, '');
+      const cachePath = app.getPath('userData').replace(/\/Application Support\/.*$/, '/Caches');
+
+      console.log('Clearing quarantine for update...');
+      console.log('App path:', appPath);
+      console.log('Cache path:', cachePath);
+
+      // Clear quarantine on common update locations
+      await execAsync(`xattr -cr "${appPath}" 2>/dev/null || true`);
+      await execAsync(`xattr -cr "${cachePath}" 2>/dev/null || true`);
+      await execAsync(`xattr -cr ~/Library/Caches/com.fitwell* 2>/dev/null || true`);
+      await execAsync(`xattr -cr /tmp/com.fitwell* 2>/dev/null || true`);
+
+      console.log('Quarantine cleared, proceeding with install');
+    } catch (err) {
+      console.error('Error clearing quarantine:', err);
+      // Continue anyway - might still work
+    }
+  }
+
   autoUpdater.quitAndInstall();
 });
 
