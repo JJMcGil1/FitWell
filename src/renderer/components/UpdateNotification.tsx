@@ -178,8 +178,42 @@ export function UpdateNotification() {
           </div>
         )}
 
-        {/* Error */}
-        {status === 'error' && (
+        {/* Error - Code Signature (macOS quarantine issue) */}
+        {status === 'error' && error.toLowerCase().includes('code signature') && (
+          <div className="pr-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">Update Ready</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">v{version} - Manual step needed</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">
+              Run this in Terminal, then reopen FitWell:
+            </p>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText('xattr -cr /Applications/FitWell.app');
+                const btn = document.getElementById('copy-btn');
+                if (btn) btn.textContent = 'Copied!';
+                setTimeout(() => {
+                  if (btn) btn.textContent = 'Copy Command';
+                }, 2000);
+              }}
+              id="copy-btn"
+              className="w-full py-2 px-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-xs font-mono rounded-lg transition-colors"
+            >
+              Copy Command
+            </button>
+          </div>
+        )}
+
+        {/* Error - Generic */}
+        {status === 'error' && !error.toLowerCase().includes('code signature') && (
           <div className="pr-6">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
