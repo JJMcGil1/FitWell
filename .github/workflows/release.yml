@@ -25,9 +25,14 @@ jobs:
       - name: Check if release already exists
         id: check_release
         run: |
-          if git tag -l "v${{ steps.version.outputs.version }}" | grep -q .; then
+          git fetch --tags
+          echo "Checking for tag v${{ steps.version.outputs.version }}"
+          git tag -l
+          if git tag -l "v${{ steps.version.outputs.version }}" | grep -q "v${{ steps.version.outputs.version }}"; then
+            echo "Tag exists, skipping release"
             echo "exists=true" >> $GITHUB_OUTPUT
           else
+            echo "Tag does not exist, proceeding with release"
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
