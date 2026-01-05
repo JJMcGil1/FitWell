@@ -78,6 +78,9 @@ function setupAutoUpdater(): void {
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
 
+  // Allow updates without code signing (for unsigned apps)
+  autoUpdater.forceCodeSigning = false;
+
   autoUpdater.on('checking-for-update', () => {
     mainWindow?.webContents.send('updater:checking');
   });
