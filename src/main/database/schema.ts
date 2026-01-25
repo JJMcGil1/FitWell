@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS weight_entries (
 );
 
 -- Workouts table
--- Stores workout sessions with exercises as JSON
+-- Stores workout sessions with exercises as JSON (historical log of completed workouts)
 CREATE TABLE IF NOT EXISTS workouts (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -86,6 +86,34 @@ CREATE TABLE IF NOT EXISTS workouts (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Workout templates table
+-- Stores reusable workout routines (e.g., "Leg Day", "Push Day")
+CREATE TABLE IF NOT EXISTS workout_templates (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('strength', 'cardio', 'flexibility', 'sports', 'other')),
+  exercises TEXT NOT NULL DEFAULT '[]',
+  color TEXT NOT NULL DEFAULT '#3b82f6',
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Weekly schedule table
+-- Maps days of the week to workout templates
+CREATE TABLE IF NOT EXISTS weekly_schedule (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  day_of_week INTEGER NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
+  template_id TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (template_id) REFERENCES workout_templates(id) ON DELETE CASCADE,
+  UNIQUE (user_id, day_of_week)
 );
 
 -- Runs table
@@ -142,6 +170,8 @@ CREATE INDEX IF NOT EXISTS idx_weight_entries_user_date ON weight_entries(user_i
 CREATE INDEX IF NOT EXISTS idx_workouts_user_date ON workouts(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_runs_user_date ON runs(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id);
+CREATE INDEX IF NOT EXISTS idx_workout_templates_user ON workout_templates(user_id);
+CREATE INDEX IF NOT EXISTS idx_weekly_schedule_user ON weekly_schedule(user_id);
 `;
 
 // No seed data needed - users create their own profiles on first launch

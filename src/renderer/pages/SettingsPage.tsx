@@ -9,6 +9,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useUserStore } from '../stores/userStore';
 import { useThemeStore } from '../stores/themeStore';
 import { Dropdown } from '../components';
+import { HiOutlineTrash, HiOutlinePlus, HiOutlineMoon, HiOutlineInformationCircle, HiOutlineXMark } from 'react-icons/hi2';
 
 // Avatar color options
 const AVATAR_COLORS = [
@@ -249,9 +250,7 @@ export const SettingsPage: React.FC = () => {
                   className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   title="Delete profile"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
+                  <HiOutlineTrash className="w-4 h-4" />
                 </button>
               </div>
             ))}
@@ -262,9 +261,7 @@ export const SettingsPage: React.FC = () => {
               className="flex items-center gap-3 w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors group"
             >
               <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 dark:bg-neutral-700 text-gray-400 dark:text-gray-500 group-hover:bg-brand-50 group-hover:text-brand-500 dark:group-hover:bg-brand-900/20 dark:group-hover:text-brand-400 transition-colors">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
+                <HiOutlinePlus className="w-5 h-5" />
               </div>
               <span className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors">Add new profile</span>
             </button>
@@ -279,9 +276,7 @@ export const SettingsPage: React.FC = () => {
           <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-700 p-4">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-neutral-700 flex items-center justify-center text-gray-500 dark:text-gray-400">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
+                <HiOutlineMoon className="w-5 h-5" />
               </div>
               <div className="flex-1">
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100 block">Theme</span>
@@ -310,9 +305,7 @@ export const SettingsPage: React.FC = () => {
           <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-700 p-4">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-neutral-700 flex items-center justify-center text-gray-500 dark:text-gray-400">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <HiOutlineInformationCircle className="w-5 h-5" />
               </div>
               <div className="flex-1">
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100 block">Version</span>
@@ -348,9 +341,7 @@ export const SettingsPage: React.FC = () => {
                         }}
                         className="absolute -top-1 -right-1 w-6 h-6 bg-gray-900 text-white rounded-full flex items-center justify-center hover:bg-gray-700 transition-colors"
                       >
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <HiOutlineXMark className="w-3 h-3" />
                       </button>
                     </div>
                   ) : (
@@ -457,9 +448,7 @@ export const SettingsPage: React.FC = () => {
                   disabled={isSubmitting}
                   className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
+                  <HiOutlineTrash className="w-4 h-4" />
                   Delete this profile
                 </button>
                 {users.length <= 1 && (
@@ -516,9 +505,7 @@ export const SettingsPage: React.FC = () => {
                         }}
                         className="absolute -top-1 -right-1 w-6 h-6 bg-gray-900 text-white rounded-full flex items-center justify-center hover:bg-gray-700 transition-colors"
                       >
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <HiOutlineXMark className="w-3 h-3" />
                       </button>
                     </div>
                   ) : (

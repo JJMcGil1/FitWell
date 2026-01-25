@@ -5,6 +5,7 @@
  */
 
 import React, { useState } from 'react';
+import { HiOutlineArrowPath, HiOutlineScale, HiOutlineClipboardDocument, HiOutlinePlus, HiOutlineCheckBadge, HiOutlineBolt, HiOutlinePencilSquare, HiOutlinePauseCircle, HiOutlineTrash, HiOutlinePlayCircle } from 'react-icons/hi2';
 import { useGoalStore } from '../stores/goalStore';
 import { useUserStore } from '../stores/userStore';
 import type { Goal, GoalType } from '../../shared/types';
@@ -78,23 +79,11 @@ export const GoalsPage: React.FC = () => {
   const getGoalTypeIcon = (type: GoalType) => {
     switch (type) {
       case 'workout':
-        return (
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        );
+        return <HiOutlineArrowPath className="w-5 h-5" />;
       case 'weight':
-        return (
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-          </svg>
-        );
+        return <HiOutlineScale className="w-5 h-5" />;
       default:
-        return (
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-        );
+        return <HiOutlineClipboardDocument className="w-5 h-5" />;
     }
   };
 
@@ -113,9 +102,7 @@ export const GoalsPage: React.FC = () => {
           onClick={() => setIsCreating(true)}
           className="btn-primary"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
+          <HiOutlinePlus className="w-4 h-4" />
           New Goal
         </button>
       </div>
@@ -196,9 +183,7 @@ export const GoalsPage: React.FC = () => {
         {activeGoals.length === 0 ? (
           <div className="card p-8 text-center">
             <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 dark:bg-neutral-700 flex items-center justify-center">
-              <svg className="w-6 h-6 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-              </svg>
+              <HiOutlineCheckBadge className="w-6 h-6 text-gray-400 dark:text-gray-500" />
             </div>
             <p className="text-gray-500 dark:text-gray-400">No active goals yet</p>
             <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Create a goal to start tracking</p>
@@ -230,9 +215,7 @@ export const GoalsPage: React.FC = () => {
                   {/* Streak */}
                   {streak && streak.currentStreak > 0 && (
                     <div className="flex items-center gap-1 text-orange-500">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
+                      <HiOutlineBolt className="w-4 h-4" />
                       <span className="text-sm font-medium">{streak.currentStreak}</span>
                     </div>
                   )}
@@ -244,27 +227,21 @@ export const GoalsPage: React.FC = () => {
                       className="p-2 text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors"
                       title="Edit goal"
                     >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
+                      <HiOutlinePencilSquare className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleToggleActive(goal)}
                       className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
                       title="Pause goal"
                     >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                      <HiOutlinePauseCircle className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(goal.id)}
                       className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       title="Delete goal"
                     >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                      <HiOutlineTrash className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -309,28 +286,21 @@ export const GoalsPage: React.FC = () => {
                     className="p-2 text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors"
                     title="Edit goal"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
+                    <HiOutlinePencilSquare className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleToggleActive(goal)}
                     className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
                     title="Resume goal"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                    <HiOutlinePlayCircle className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(goal.id)}
                     className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                     title="Delete goal"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+                    <HiOutlineTrash className="w-4 h-4" />
                   </button>
                 </div>
               </div>

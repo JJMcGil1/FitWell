@@ -9,7 +9,7 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type { IpcApi, Goal, DailyLog, WeightEntry, Workout, Run, AppSettings, CreateUserData } from '../shared/types';
+import type { IpcApi, Goal, DailyLog, WeightEntry, Workout, Run, AppSettings, CreateUserData, WorkoutTemplate } from '../shared/types';
 
 // Updater API
 const updaterApi = {
@@ -77,7 +77,7 @@ const api: IpcApi = {
     ipcRenderer.invoke('weight:add', entry),
   deleteWeightEntry: (id) => ipcRenderer.invoke('weight:delete', id),
 
-  // Workout operations
+  // Workout operations (historical log)
   getWorkouts: (userId, startDate, endDate) =>
     ipcRenderer.invoke('workouts:getAll', userId, startDate, endDate),
   getWorkout: (id) => ipcRenderer.invoke('workouts:get', id),
@@ -85,6 +85,20 @@ const api: IpcApi = {
     ipcRenderer.invoke('workouts:create', workout),
   updateWorkout: (id, updates) => ipcRenderer.invoke('workouts:update', id, updates),
   deleteWorkout: (id) => ipcRenderer.invoke('workouts:delete', id),
+
+  // Workout Template operations (reusable routines)
+  getWorkoutTemplates: (userId) => ipcRenderer.invoke('templates:getAll', userId),
+  getWorkoutTemplate: (id) => ipcRenderer.invoke('templates:get', id),
+  createWorkoutTemplate: (template: Omit<WorkoutTemplate, 'id' | 'createdAt' | 'updatedAt'>) =>
+    ipcRenderer.invoke('templates:create', template),
+  updateWorkoutTemplate: (id, updates) => ipcRenderer.invoke('templates:update', id, updates),
+  deleteWorkoutTemplate: (id) => ipcRenderer.invoke('templates:delete', id),
+
+  // Weekly Schedule operations
+  getSchedule: (userId) => ipcRenderer.invoke('schedule:get', userId),
+  setScheduleEntry: (userId, dayOfWeek, templateId) =>
+    ipcRenderer.invoke('schedule:set', userId, dayOfWeek, templateId),
+  clearSchedule: (userId) => ipcRenderer.invoke('schedule:clear', userId),
 
   // Run operations
   getRuns: (userId, startDate, endDate) =>

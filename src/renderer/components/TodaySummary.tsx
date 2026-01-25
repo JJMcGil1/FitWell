@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { format } from 'date-fns';
+import { HiOutlineSun, HiOutlineBolt, HiOutlineCheck, HiOutlineBars4, HiOutlineCheckCircle } from 'react-icons/hi2';
 import { useWorkoutStore } from '../stores/workoutStore';
 import { useRunStore, formatDuration, formatPace } from '../stores/runStore';
 
@@ -40,9 +41,7 @@ export const TodaySummary: React.FC = () => {
       <div className="card p-5 mb-6">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
-            <svg className="w-6 h-6 text-brand-600 dark:text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
+            <HiOutlineSun className="w-6 h-6 text-brand-600 dark:text-brand-400" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Today</h3>
@@ -50,9 +49,7 @@ export const TodaySummary: React.FC = () => {
           </div>
         </div>
         <div className="mt-4 flex items-center gap-2 p-3 rounded-lg bg-brand-50 dark:bg-brand-900/20">
-          <svg className="w-5 h-5 text-brand-600 dark:text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
+          <HiOutlineBolt className="w-5 h-5 text-brand-600 dark:text-brand-400" />
           <span className="text-sm font-medium text-brand-700 dark:text-brand-300">
             Log a workout or run to get started!
           </span>
@@ -67,9 +64,7 @@ export const TodaySummary: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-            <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+            <HiOutlineCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Today</h3>
@@ -81,9 +76,7 @@ export const TodaySummary: React.FC = () => {
 
         {/* Activity count badge */}
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20">
-          <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
+          <HiOutlineCheck className="w-4 h-4 text-emerald-500" />
           <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{totalActivities}</span>
           <span className="text-xs text-emerald-500 dark:text-emerald-400">activit{totalActivities !== 1 ? 'ies' : 'y'}</span>
         </div>
@@ -99,9 +92,7 @@ export const TodaySummary: React.FC = () => {
           >
             {/* Icon */}
             <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
+              <HiOutlineBars4 className="w-4 h-4 text-white" />
             </div>
 
             {/* Workout info */}
@@ -121,9 +112,7 @@ export const TodaySummary: React.FC = () => {
             </div>
 
             {/* Checkmark */}
-            <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+            <HiOutlineCheck className="w-5 h-5 text-emerald-500" />
           </div>
         ))}
 
@@ -135,9 +124,7 @@ export const TodaySummary: React.FC = () => {
           >
             {/* Icon */}
             <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+              <HiOutlineBolt className="w-4 h-4 text-white" />
             </div>
 
             {/* Run info */}
@@ -159,18 +146,14 @@ export const TodaySummary: React.FC = () => {
             </div>
 
             {/* Checkmark */}
-            <svg className="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+            <HiOutlineCheck className="w-5 h-5 text-orange-500" />
           </div>
         ))}
       </div>
 
       {/* Motivational message */}
       <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20">
-        <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
+        <HiOutlineCheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
         <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
           {getMotivationalMessage()}
         </span>

@@ -5,15 +5,27 @@
  * - Window drag region at top
  * - Navigation in upper section
  * - User summary at bottom with quick switch
+ * - Collapsible to icon-only mode
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigationStore, type Page } from '../stores/navigationStore';
 import { useUserStore } from '../stores/userStore';
 import { useWorkoutStore } from '../stores/workoutStore';
 import { useWeightStore } from '../stores/weightStore';
 import { format, subDays } from 'date-fns';
 import logoFull from '../../../assets/fitwell-logo.svg';
+import logoIcon from '../../../assets/fitwell-logo-icon.svg';
+import { FaPersonRunning } from 'react-icons/fa6';
+import { FaFire } from 'react-icons/fa';
+import { LuLayoutDashboard, LuScale, LuChevronsLeft, LuChevronsRight } from 'react-icons/lu';
+import { AiOutlineSchedule } from 'react-icons/ai';
+import { BsCalendar2Check } from 'react-icons/bs';
+import { GoGoal } from 'react-icons/go';
+import { GrAchievement } from 'react-icons/gr';
+import { IoScale } from 'react-icons/io5';
+
+const SIDEBAR_COLLAPSED_KEY = 'fitwell-sidebar-collapsed';
 
 interface NavItem {
   id: Page;
@@ -25,47 +37,27 @@ const navItems: NavItem[] = [
   {
     id: 'dashboard',
     label: 'Dashboard',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-      </svg>
-    ),
+    icon: <LuLayoutDashboard className="w-5 h-5" />,
   },
   {
     id: 'calendar',
     label: 'Calendar',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    ),
+    icon: <BsCalendar2Check className="w-5 h-5" />,
   },
   {
     id: 'workouts',
     label: 'Workout Schedule',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-      </svg>
-    ),
+    icon: <AiOutlineSchedule className="w-5 h-5" />,
   },
   {
     id: 'running',
     label: 'Cardio',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-      </svg>
-    ),
+    icon: <FaPersonRunning className="w-5 h-5" />,
   },
   {
     id: 'weight',
     label: 'Weight',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-      </svg>
-    ),
+    icon: <LuScale className="w-5 h-5" />,
   },
 ];
 
@@ -74,6 +66,18 @@ export const Sidebar: React.FC = () => {
   const { currentUser, isSwitching } = useUserStore();
   const { workouts } = useWorkoutStore();
   const { getLatestWeight } = useWeightStore();
+
+  // Collapsed state with localStorage persistence
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    return saved === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(isCollapsed));
+  }, [isCollapsed]);
+
+  const toggleCollapsed = () => setIsCollapsed(!isCollapsed);
 
   // Calculate current streak from workouts (consecutive days with workouts)
   const currentStreak = useMemo(() => {
@@ -101,13 +105,22 @@ export const Sidebar: React.FC = () => {
   const latestWeight = getLatestWeight();
 
   return (
-    <aside className="w-56 bg-gradient-to-b from-neutral-800 via-neutral-900 to-neutral-950 flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.3)]">
+    <aside className={`
+      ${isCollapsed ? 'w-20' : 'w-56'}
+      bg-gradient-to-b from-neutral-800 via-neutral-900 to-neutral-950
+      flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.3)]
+      transition-all duration-300 ease-out
+    `}>
       {/* Drag region for macOS window controls */}
       <div className="h-8 drag-region flex-shrink-0" />
 
       {/* Logo */}
-      <div className="px-3 py-4">
-        <img src={logoFull} alt="FitWell" className="h-10" draggable={false} />
+      <div className={`py-4 ${isCollapsed ? 'px-3' : 'px-3'}`}>
+        {isCollapsed ? (
+          <img src={logoIcon} alt="FitWell" className="h-10 mx-auto" draggable={false} />
+        ) : (
+          <img src={logoFull} alt="FitWell" className="h-10" draggable={false} />
+        )}
       </div>
 
       {/* Navigation */}
@@ -119,11 +132,13 @@ export const Sidebar: React.FC = () => {
               <li key={item.id}>
                 <button
                   onClick={() => navigate(item.id)}
+                  title={isCollapsed ? item.label : undefined}
                   className={`
-                    w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
-                    transition-all duration-200 ease-out relative group
+                    w-full flex items-center py-2.5 rounded-lg
+                    transition-all duration-300 ease-out relative group
                     text-[14px] font-medium tracking-[-0.01em]
                     outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40 focus-visible:ring-offset-0
+                    ${isCollapsed ? 'justify-center px-0 gap-0' : 'px-3 gap-3'}
                     ${isActive
                       ? 'bg-white/[0.08] text-white'
                       : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200 active:bg-white/[0.06]'
@@ -134,14 +149,15 @@ export const Sidebar: React.FC = () => {
                   <span
                     className={`
                       absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full
-                      transition-all duration-200 ease-out
+                      transition-all duration-300 ease-out
                       ${isActive ? 'h-4 bg-orange-500' : 'h-0 bg-orange-500/0'}
                     `}
                   />
 
-                  {/* Icon with smooth color transition */}
+                  {/* Icon with smooth size and color transition */}
                   <span className={`
-                    transition-colors duration-200 ease-out flex-shrink-0
+                    transition-all duration-300 ease-out flex-shrink-0
+                    ${isCollapsed ? '[&>svg]:w-6 [&>svg]:h-6' : '[&>svg]:w-5 [&>svg]:h-5'}
                     ${isActive
                       ? 'text-orange-400'
                       : 'text-neutral-500 group-hover:text-neutral-400'
@@ -150,7 +166,13 @@ export const Sidebar: React.FC = () => {
                     {item.icon}
                   </span>
 
-                  {item.label}
+                  {/* Label with smooth fade transition */}
+                  <span className={`
+                    truncate transition-all duration-300 ease-out overflow-hidden whitespace-nowrap
+                    ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}
+                  `}>
+                    {item.label}
+                  </span>
                 </button>
               </li>
             );
@@ -161,6 +183,24 @@ export const Sidebar: React.FC = () => {
       {/* Spacer */}
       <div className="flex-1" />
 
+      {/* Collapse toggle button */}
+      <div className={`${isCollapsed ? 'px-3' : 'px-3'} mb-2`}>
+        <button
+          onClick={toggleCollapsed}
+          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className="w-full flex items-center justify-center py-2 rounded-lg
+            text-neutral-500 hover:text-neutral-300 hover:bg-white/[0.04]
+            transition-all duration-200 ease-out
+            outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40"
+        >
+          {isCollapsed ? (
+            <LuChevronsRight className="w-5 h-5" />
+          ) : (
+            <LuChevronsLeft className="w-5 h-5" />
+          )}
+        </button>
+      </div>
+
       {/* Divider - full width */}
       <div className="border-t border-neutral-700 mb-2" />
 
@@ -169,11 +209,13 @@ export const Sidebar: React.FC = () => {
         {/* Goals */}
         <button
           onClick={() => navigate('goals')}
+          title={isCollapsed ? 'Goals' : undefined}
           className={`
-            w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
-            transition-all duration-200 ease-out relative group
+            w-full flex items-center py-2.5 rounded-lg
+            transition-all duration-300 ease-out relative group
             text-[14px] font-medium tracking-[-0.01em]
             outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40 focus-visible:ring-offset-0
+            ${isCollapsed ? 'justify-center px-0 gap-0' : 'px-3 gap-3'}
             ${currentPage === 'goals'
               ? 'bg-white/[0.08] text-white'
               : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200 active:bg-white/[0.06]'
@@ -184,35 +226,41 @@ export const Sidebar: React.FC = () => {
           <span
             className={`
               absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full
-              transition-all duration-200 ease-out
+              transition-all duration-300 ease-out
               ${currentPage === 'goals' ? 'h-4 bg-orange-500' : 'h-0 bg-orange-500/0'}
             `}
           />
 
-          {/* Icon */}
+          {/* Icon with smooth size transition */}
           <span className={`
-            transition-colors duration-200 ease-out flex-shrink-0
+            transition-all duration-300 ease-out flex-shrink-0
             ${currentPage === 'goals'
               ? 'text-orange-400'
               : 'text-neutral-500 group-hover:text-neutral-400'
             }
           `}>
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-            </svg>
+            <GoGoal className={`transition-all duration-300 ${isCollapsed ? 'w-6 h-6' : 'w-5 h-5'}`} />
           </span>
 
-          Goals
+          {/* Label with smooth fade transition */}
+          <span className={`
+            transition-all duration-300 ease-out overflow-hidden whitespace-nowrap
+            ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}
+          `}>
+            Goals
+          </span>
         </button>
 
         {/* Achievements */}
         <button
           onClick={() => navigate('achievements')}
+          title={isCollapsed ? 'Achievements' : undefined}
           className={`
-            w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
-            transition-all duration-200 ease-out relative group
+            w-full flex items-center py-2.5 rounded-lg
+            transition-all duration-300 ease-out relative group
             text-[14px] font-medium tracking-[-0.01em]
             outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40 focus-visible:ring-offset-0
+            ${isCollapsed ? 'justify-center px-0 gap-0' : 'px-3 gap-3'}
             ${currentPage === 'achievements'
               ? 'bg-white/[0.08] text-white'
               : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200 active:bg-white/[0.06]'
@@ -223,25 +271,29 @@ export const Sidebar: React.FC = () => {
           <span
             className={`
               absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full
-              transition-all duration-200 ease-out
+              transition-all duration-300 ease-out
               ${currentPage === 'achievements' ? 'h-4 bg-orange-500' : 'h-0 bg-orange-500/0'}
             `}
           />
 
-          {/* Icon */}
+          {/* Icon with smooth size transition */}
           <span className={`
-            transition-colors duration-200 ease-out flex-shrink-0
+            transition-all duration-300 ease-out flex-shrink-0
             ${currentPage === 'achievements'
               ? 'text-orange-400'
               : 'text-neutral-500 group-hover:text-neutral-400'
             }
           `}>
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0" />
-            </svg>
+            <GrAchievement className={`transition-all duration-300 ${isCollapsed ? 'w-6 h-6' : 'w-5 h-5'}`} />
           </span>
 
-          Achievements
+          {/* Label with smooth fade transition */}
+          <span className={`
+            transition-all duration-300 ease-out overflow-hidden whitespace-nowrap
+            ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}
+          `}>
+            Achievements
+          </span>
         </button>
 
         {/* User tile - clicks to Settings */}
@@ -249,8 +301,10 @@ export const Sidebar: React.FC = () => {
           <button
             onClick={() => navigate('settings')}
             disabled={isSwitching}
+            title={isCollapsed ? currentUser.name : undefined}
             className={`
-              w-full rounded-lg px-3 py-2.5 mt-1 transition-all duration-200 ease-out relative
+              w-full rounded-lg ${isCollapsed ? 'px-0 flex justify-center' : 'px-3'} py-2.5 mt-1
+              transition-all duration-200 ease-out relative
               hover:bg-white/[0.04] active:bg-white/[0.06]
               outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40 focus-visible:ring-offset-0
               ${currentPage === 'settings' ? 'bg-white/[0.08]' : ''}
@@ -265,6 +319,25 @@ export const Sidebar: React.FC = () => {
                 ${currentPage === 'settings' ? 'h-4 bg-orange-500' : 'h-0 bg-orange-500/0'}
               `}
             />
+            {isCollapsed ? (
+              /* Collapsed: Avatar only */
+              currentUser.profilePhoto ? (
+                <img
+                  src={currentUser.profilePhoto}
+                  alt={currentUser.name}
+                  className={`w-8 h-8 rounded-full object-cover flex-shrink-0 transition-all duration-200 ease-out ${isSwitching ? 'scale-90 opacity-0' : 'scale-100 opacity-100'}`}
+                />
+              ) : (
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-[13px] font-semibold flex-shrink-0 transition-all duration-200 ease-out ${isSwitching ? 'scale-90 opacity-0' : 'scale-100 opacity-100'}`}
+                  style={{ backgroundColor: currentUser.avatarColor }}
+                >
+                  {(currentUser.firstName?.charAt(0) ?? '').toUpperCase()}
+                  {(currentUser.lastName?.charAt(0) ?? '').toUpperCase()}
+                </div>
+              )
+            ) : (
+              /* Expanded: Full user tile */
               <div className="flex items-center gap-3">
                 {/* Avatar */}
                 {currentUser.profilePhoto ? (
@@ -291,23 +364,20 @@ export const Sidebar: React.FC = () => {
                   <div className="flex items-center gap-2.5 mt-0.5">
                     {/* Streak */}
                     <span className="text-[12px] text-neutral-500 flex items-center gap-1">
-                      <svg className={`w-3.5 h-3.5 ${currentStreak > 0 ? 'text-orange-400' : 'opacity-50'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
+                      <FaFire className={`w-3.5 h-3.5 ${currentStreak > 0 ? 'text-orange-400' : 'opacity-50'}`} />
                       <span className={currentStreak > 0 ? 'text-orange-400 font-medium' : ''}>
                         {currentStreak}
                       </span>
                     </span>
                     {/* Weight */}
                     <span className="text-[12px] text-neutral-500 flex items-center gap-1">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                      </svg>
+                      <IoScale className="w-3.5 h-3.5" />
                       <span>{latestWeight?.weight ?? '—'}</span>
                     </span>
                   </div>
                 </div>
               </div>
+            )}
           </button>
         )}
       </div>

@@ -96,6 +96,45 @@ export interface Workout {
 }
 
 // ============================================
+// Workout Schedule Types (Weekly Planning)
+// ============================================
+
+/**
+ * A workout template defines a reusable workout routine
+ * e.g., "Leg Day", "Push Day", "Pull Day"
+ */
+export interface WorkoutTemplate {
+  id: string;
+  userId: string;
+  name: string;
+  type: WorkoutType;
+  exercises: Exercise[];
+  color: string; // Hex color for visual identification
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Assigns a workout template to a day of the week
+ * dayOfWeek: 0 = Sunday, 1 = Monday, ... 6 = Saturday
+ */
+export interface ScheduleEntry {
+  id: string;
+  userId: string;
+  dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  templateId: string;
+  createdAt: string;
+}
+
+/**
+ * Full weekly schedule with template details
+ */
+export interface WeeklySchedule {
+  [key: number]: WorkoutTemplate | null; // 0-6 mapped to templates
+}
+
+// ============================================
 // Running Types
 // ============================================
 
@@ -224,12 +263,24 @@ export interface IpcApi {
   addWeightEntry: (entry: Omit<WeightEntry, 'id' | 'createdAt'>) => Promise<WeightEntry>;
   deleteWeightEntry: (id: string) => Promise<void>;
 
-  // Workout operations
+  // Workout operations (historical log)
   getWorkouts: (userId: string, startDate?: string, endDate?: string) => Promise<Workout[]>;
   getWorkout: (id: string) => Promise<Workout | null>;
   createWorkout: (workout: Omit<Workout, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Workout>;
   updateWorkout: (id: string, updates: Partial<Omit<Workout, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<Workout>;
   deleteWorkout: (id: string) => Promise<void>;
+
+  // Workout Template operations (reusable routines)
+  getWorkoutTemplates: (userId: string) => Promise<WorkoutTemplate[]>;
+  getWorkoutTemplate: (id: string) => Promise<WorkoutTemplate | null>;
+  createWorkoutTemplate: (template: Omit<WorkoutTemplate, 'id' | 'createdAt' | 'updatedAt'>) => Promise<WorkoutTemplate>;
+  updateWorkoutTemplate: (id: string, updates: Partial<Omit<WorkoutTemplate, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<WorkoutTemplate>;
+  deleteWorkoutTemplate: (id: string) => Promise<void>;
+
+  // Weekly Schedule operations
+  getSchedule: (userId: string) => Promise<ScheduleEntry[]>;
+  setScheduleEntry: (userId: string, dayOfWeek: number, templateId: string | null) => Promise<ScheduleEntry | null>;
+  clearSchedule: (userId: string) => Promise<void>;
 
   // Run operations
   getRuns: (userId: string, startDate?: string, endDate?: string) => Promise<Run[]>;

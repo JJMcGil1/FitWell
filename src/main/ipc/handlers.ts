@@ -7,7 +7,7 @@
 
 import { ipcMain } from 'electron';
 import * as db from '../database';
-import type { Goal, DailyLog, WeightEntry, Workout, Run, AppSettings, UserAchievement } from '../../shared/types';
+import type { Goal, DailyLog, WeightEntry, Workout, Run, AppSettings, UserAchievement, WorkoutTemplate } from '../../shared/types';
 
 export function registerIpcHandlers(): void {
   // ========================================
@@ -138,6 +138,52 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('workouts:delete', (_, id: string) => {
     db.deleteWorkout(id);
+  });
+
+  // ========================================
+  // Workout Template Handlers
+  // ========================================
+
+  ipcMain.handle('templates:getAll', (_, userId: string) => {
+    return db.getWorkoutTemplates(userId);
+  });
+
+  ipcMain.handle('templates:get', (_, id: string) => {
+    return db.getWorkoutTemplate(id);
+  });
+
+  ipcMain.handle(
+    'templates:create',
+    (_, template: Omit<WorkoutTemplate, 'id' | 'createdAt' | 'updatedAt'>) => {
+      return db.createWorkoutTemplate(template);
+    }
+  );
+
+  ipcMain.handle(
+    'templates:update',
+    (_, id: string, updates: Partial<Omit<WorkoutTemplate, 'id' | 'createdAt' | 'updatedAt'>>) => {
+      return db.updateWorkoutTemplate(id, updates);
+    }
+  );
+
+  ipcMain.handle('templates:delete', (_, id: string) => {
+    db.deleteWorkoutTemplate(id);
+  });
+
+  // ========================================
+  // Weekly Schedule Handlers
+  // ========================================
+
+  ipcMain.handle('schedule:get', (_, userId: string) => {
+    return db.getSchedule(userId);
+  });
+
+  ipcMain.handle('schedule:set', (_, userId: string, dayOfWeek: number, templateId: string | null) => {
+    return db.setScheduleEntry(userId, dayOfWeek, templateId);
+  });
+
+  ipcMain.handle('schedule:clear', (_, userId: string) => {
+    db.clearSchedule(userId);
   });
 
   // ========================================

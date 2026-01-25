@@ -23,6 +23,8 @@ import type {
   MonthSummary,
   UserAchievement,
   AchievementStats,
+  WorkoutTemplate,
+  ScheduleEntry,
 } from '../../shared/types';
 
 let db: Database.Database | null = null;
@@ -764,6 +766,218 @@ export function updateWorkout(
 
 export function deleteWorkout(id: string): void {
   getDatabase().prepare('DELETE FROM workouts WHERE id = ?').run(id);
+}
+
+// ============================================
+// Workout Template Operations
+// ============================================
+
+export function getWorkoutTemplates(userId: string): WorkoutTemplate[] {
+  const rows = getDatabase()
+    .prepare('SELECT * FROM workout_templates WHERE user_id = ? ORDER BY name')
+    .all(userId) as Array<{
+      id: string;
+      user_id: string;
+      name: string;
+      type: string;
+      exercises: string;
+      color: string;
+      notes: string | null;
+      created_at: string;
+      updated_at: string;
+    }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    type: row.type as WorkoutTemplate['type'],
+    exercises: JSON.parse(row.exercises) as Exercise[],
+    color: row.color,
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }));
+}
+
+export function getWorkoutTemplate(id: string): WorkoutTemplate | null {
+  const row = getDatabase()
+    .prepare('SELECT * FROM workout_templates WHERE id = ?')
+    .get(id) as {
+      id: string;
+      user_id: string;
+      name: string;
+      type: string;
+      exercises: string;
+      color: string;
+      notes: string | null;
+      created_at: string;
+      updated_at: string;
+    } | undefined;
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    type: row.type as WorkoutTemplate['type'],
+    exercises: JSON.parse(row.exercises) as Exercise[],
+    color: row.color,
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function createWorkoutTemplate(
+  template: Omit<WorkoutTemplate, 'id' | 'createdAt' | 'updatedAt'>
+): WorkoutTemplate {
+  const id = `template_${uuidv4()}`;
+  const now = new Date().toISOString();
+
+  getDatabase()
+    .prepare(
+      `INSERT INTO workout_templates (id, user_id, name, type, exercises, color, notes, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      id,
+      template.userId,
+      template.name,
+      template.type,
+      JSON.stringify(template.exercises),
+      template.color,
+      template.notes ?? null,
+      now,
+      now
+    );
+
+  return {
+    ...template,
+    id,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+export function updateWorkoutTemplate(
+  id: string,
+  updates: Partial<Omit<WorkoutTemplate, 'id' | 'createdAt' | 'updatedAt'>>
+): WorkoutTemplate {
+  const now = new Date().toISOString();
+  const setClauses: string[] = ['updated_at = ?'];
+  const values: (string | number | null)[] = [now];
+
+  if (updates.name !== undefined) {
+    setClauses.push('name = ?');
+    values.push(updates.name);
+  }
+  if (updates.type !== undefined) {
+    setClauses.push('type = ?');
+    values.push(updates.type);
+  }
+  if (updates.exercises !== undefined) {
+    setClauses.push('exercises = ?');
+    values.push(JSON.stringify(updates.exercises));
+  }
+  if (updates.color !== undefined) {
+    setClauses.push('color = ?');
+    values.push(updates.color);
+  }
+  if (updates.notes !== undefined) {
+    setClauses.push('notes = ?');
+    values.push(updates.notes ?? null);
+  }
+
+  values.push(id);
+  getDatabase()
+    .prepare(`UPDATE workout_templates SET ${setClauses.join(', ')} WHERE id = ?`)
+    .run(...values);
+
+  return getWorkoutTemplate(id)!;
+}
+
+export function deleteWorkoutTemplate(id: string): void {
+  // First delete any schedule entries referencing this template
+  getDatabase().prepare('DELETE FROM weekly_schedule WHERE template_id = ?').run(id);
+  // Then delete the template
+  getDatabase().prepare('DELETE FROM workout_templates WHERE id = ?').run(id);
+}
+
+// ============================================
+// Weekly Schedule Operations
+// ============================================
+
+export function getSchedule(userId: string): ScheduleEntry[] {
+  const rows = getDatabase()
+    .prepare('SELECT * FROM weekly_schedule WHERE user_id = ? ORDER BY day_of_week')
+    .all(userId) as Array<{
+      id: string;
+      user_id: string;
+      day_of_week: number;
+      template_id: string;
+      created_at: string;
+    }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    dayOfWeek: row.day_of_week as ScheduleEntry['dayOfWeek'],
+    templateId: row.template_id,
+    createdAt: row.created_at,
+  }));
+}
+
+export function setScheduleEntry(
+  userId: string,
+  dayOfWeek: number,
+  templateId: string | null
+): ScheduleEntry | null {
+  const now = new Date().toISOString();
+
+  if (templateId === null) {
+    // Remove the schedule entry for this day
+    getDatabase()
+      .prepare('DELETE FROM weekly_schedule WHERE user_id = ? AND day_of_week = ?')
+      .run(userId, dayOfWeek);
+    return null;
+  }
+
+  const id = `schedule_${uuidv4()}`;
+
+  // Use INSERT OR REPLACE to handle existing entries
+  getDatabase()
+    .prepare(
+      `INSERT OR REPLACE INTO weekly_schedule (id, user_id, day_of_week, template_id, created_at)
+       VALUES (
+         COALESCE((SELECT id FROM weekly_schedule WHERE user_id = ? AND day_of_week = ?), ?),
+         ?, ?, ?, ?
+       )`
+    )
+    .run(userId, dayOfWeek, id, userId, dayOfWeek, templateId, now);
+
+  const row = getDatabase()
+    .prepare('SELECT * FROM weekly_schedule WHERE user_id = ? AND day_of_week = ?')
+    .get(userId, dayOfWeek) as {
+      id: string;
+      user_id: string;
+      day_of_week: number;
+      template_id: string;
+      created_at: string;
+    };
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    dayOfWeek: row.day_of_week as ScheduleEntry['dayOfWeek'],
+    templateId: row.template_id,
+    createdAt: row.created_at,
+  };
+}
+
+export function clearSchedule(userId: string): void {
+  getDatabase().prepare('DELETE FROM weekly_schedule WHERE user_id = ?').run(userId);
 }
 
 // ============================================

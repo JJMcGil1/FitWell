@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { HiOutlineBolt } from 'react-icons/hi2';
 
 export const LoadingScreen: React.FC = () => {
   return (
@@ -14,9 +15,7 @@ export const LoadingScreen: React.FC = () => {
       <div className="absolute top-0 left-0 right-0 h-14 drag-region" />
       <div className="flex items-center gap-3 mb-8">
         <div className="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center">
-          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
+          <HiOutlineBolt className="w-6 h-6 text-white" />
         </div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">FitWell</h1>
       </div>

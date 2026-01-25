@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { HiOutlineChevronDown, HiOutlineCheck } from 'react-icons/hi2';
 
 export interface DropdownOption<T extends string = string> {
   value: T;
@@ -130,15 +131,9 @@ export function Dropdown<T extends string = string>({
         aria-expanded={isOpen}
       >
         <span className="truncate">{selectedOption?.label || placeholder}</span>
-        <svg
+        <HiOutlineChevronDown
           className={`w-3.5 h-3.5 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2.5}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
+        />
       </button>
 
       {/* Dropdown Menu */}
@@ -183,9 +178,7 @@ export function Dropdown<T extends string = string>({
                 {/* Checkmark */}
                 <span className="w-4 flex-shrink-0 text-brand-500 dark:text-brand-400">
                   {isSelected && (
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
+                    <HiOutlineCheck className="w-4 h-4" />
                   )}
                 </span>
 
