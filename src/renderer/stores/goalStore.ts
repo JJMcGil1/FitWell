@@ -11,8 +11,6 @@ import {
   format,
   startOfMonth,
   endOfMonth,
-  eachDayOfInterval,
-  parseISO,
 } from 'date-fns';
 
 interface GoalState {

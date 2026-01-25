@@ -7,11 +7,12 @@
  * - User summary at bottom with quick switch
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigationStore, type Page } from '../stores/navigationStore';
 import { useUserStore } from '../stores/userStore';
-import { useGoalStore } from '../stores/goalStore';
+import { useWorkoutStore } from '../stores/workoutStore';
 import { useWeightStore } from '../stores/weightStore';
+import { format, subDays } from 'date-fns';
 import logoFull from '../../../assets/fitwell-logo.svg';
 
 interface NavItem {
@@ -21,6 +22,15 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+    ),
+  },
   {
     id: 'calendar',
     label: 'Calendar',
@@ -41,7 +51,7 @@ const navItems: NavItem[] = [
   },
   {
     id: 'running',
-    label: 'Running',
+    label: 'Cardio',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
@@ -49,11 +59,11 @@ const navItems: NavItem[] = [
     ),
   },
   {
-    id: 'goals',
-    label: 'Goals',
+    id: 'weight',
+    label: 'Weight',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
       </svg>
     ),
   },
@@ -62,13 +72,30 @@ const navItems: NavItem[] = [
 export const Sidebar: React.FC = () => {
   const { currentPage, navigate } = useNavigationStore();
   const { currentUser, isSwitching } = useUserStore();
-  const { goals, streaks } = useGoalStore();
+  const { workouts } = useWorkoutStore();
   const { getLatestWeight } = useWeightStore();
 
-  // Get current streak
-  const primaryGoal = goals.find((g) => g.isActive);
-  const streak = primaryGoal ? streaks.get(primaryGoal.id) : null;
-  const currentStreak = streak?.currentStreak ?? 0;
+  // Calculate current streak from workouts (consecutive days with workouts)
+  const currentStreak = useMemo(() => {
+    if (workouts.length === 0) return 0;
+
+    const workoutDates = new Set(workouts.map(w => w.date));
+    const today = new Date();
+    let streak = 0;
+
+    // Check from today backwards
+    for (let i = 0; i < 365; i++) {
+      const checkDate = format(subDays(today, i), 'yyyy-MM-dd');
+      if (workoutDates.has(checkDate)) {
+        streak++;
+      } else if (i > 0) {
+        // Allow today to be missing (streak continues from yesterday)
+        break;
+      }
+    }
+
+    return streak;
+  }, [workouts]);
 
   // Get latest weight
   const latestWeight = getLatestWeight();
@@ -134,15 +161,96 @@ export const Sidebar: React.FC = () => {
       {/* Spacer */}
       <div className="flex-1" />
 
+      {/* Divider - full width */}
+      <div className="border-t border-neutral-700 mb-2" />
+
       {/* Bottom section */}
       <div className="pb-4 px-3">
+        {/* Goals */}
+        <button
+          onClick={() => navigate('goals')}
+          className={`
+            w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
+            transition-all duration-200 ease-out relative group
+            text-[14px] font-medium tracking-[-0.01em]
+            outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40 focus-visible:ring-offset-0
+            ${currentPage === 'goals'
+              ? 'bg-white/[0.08] text-white'
+              : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200 active:bg-white/[0.06]'
+            }
+          `}
+        >
+          {/* Active indicator */}
+          <span
+            className={`
+              absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full
+              transition-all duration-200 ease-out
+              ${currentPage === 'goals' ? 'h-4 bg-orange-500' : 'h-0 bg-orange-500/0'}
+            `}
+          />
+
+          {/* Icon */}
+          <span className={`
+            transition-colors duration-200 ease-out flex-shrink-0
+            ${currentPage === 'goals'
+              ? 'text-orange-400'
+              : 'text-neutral-500 group-hover:text-neutral-400'
+            }
+          `}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+            </svg>
+          </span>
+
+          Goals
+        </button>
+
+        {/* Achievements */}
+        <button
+          onClick={() => navigate('achievements')}
+          className={`
+            w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
+            transition-all duration-200 ease-out relative group
+            text-[14px] font-medium tracking-[-0.01em]
+            outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40 focus-visible:ring-offset-0
+            ${currentPage === 'achievements'
+              ? 'bg-white/[0.08] text-white'
+              : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200 active:bg-white/[0.06]'
+            }
+          `}
+        >
+          {/* Active indicator */}
+          <span
+            className={`
+              absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full
+              transition-all duration-200 ease-out
+              ${currentPage === 'achievements' ? 'h-4 bg-orange-500' : 'h-0 bg-orange-500/0'}
+            `}
+          />
+
+          {/* Icon */}
+          <span className={`
+            transition-colors duration-200 ease-out flex-shrink-0
+            ${currentPage === 'achievements'
+              ? 'text-orange-400'
+              : 'text-neutral-500 group-hover:text-neutral-400'
+            }
+          `}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0" />
+            </svg>
+          </span>
+
+          Achievements
+        </button>
+
         {/* User tile - clicks to Settings */}
         {currentUser && (
           <button
             onClick={() => navigate('settings')}
             disabled={isSwitching}
             className={`
-              w-full rounded-lg px-3 py-2.5 transition-all duration-200 ease-out relative
+              w-full rounded-lg px-3 py-2.5 mt-1 transition-all duration-200 ease-out relative
               hover:bg-white/[0.04] active:bg-white/[0.06]
               outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40 focus-visible:ring-offset-0
               ${currentPage === 'settings' ? 'bg-white/[0.08]' : ''}

@@ -59,6 +59,110 @@ export interface WeightEntry {
 }
 
 // ============================================
+// Workout Types
+// ============================================
+
+export type WorkoutType = 'strength' | 'cardio' | 'flexibility' | 'sports' | 'other';
+
+export interface Exercise {
+  id: string;
+  name: string;
+  sets?: ExerciseSet[];
+  duration?: number; // minutes (for cardio)
+  distance?: number; // miles or km (for cardio)
+  notes?: string;
+}
+
+export interface ExerciseSet {
+  id: string;
+  reps?: number;
+  weight?: number;
+  unit?: 'lbs' | 'kg';
+  duration?: number; // seconds (for timed exercises like planks)
+  completed: boolean;
+}
+
+export interface Workout {
+  id: string;
+  userId: string;
+  date: string; // YYYY-MM-DD format
+  type: WorkoutType;
+  name: string;
+  exercises: Exercise[];
+  duration?: number; // total duration in minutes
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================
+// Running Types
+// ============================================
+
+export type RunType = 'easy' | 'tempo' | 'interval' | 'long' | 'recovery' | 'race';
+
+export interface Run {
+  id: string;
+  userId: string;
+  date: string; // YYYY-MM-DD format
+  type: RunType;
+  distance: number; // miles
+  duration: number; // minutes
+  pace?: number; // minutes per mile (calculated)
+  calories?: number;
+  heartRateAvg?: number;
+  heartRateMax?: number;
+  elevation?: number; // feet
+  route?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================
+// Achievement Types
+// ============================================
+
+export type AchievementCategory = 'workout' | 'running' | 'weight' | 'streak' | 'special';
+export type AchievementTier = 'bronze' | 'silver' | 'gold' | 'platinum';
+
+/**
+ * Achievement definition - static, defined in code
+ * These are the possible achievements users can unlock
+ */
+export interface AchievementDefinition {
+  id: string;
+  name: string;
+  description: string;
+  category: AchievementCategory;
+  tier: AchievementTier;
+  icon: string; // SVG icon name or emoji
+  requirement: number; // Target value to unlock
+  requirementType: 'count' | 'streak' | 'weight_lost' | 'distance' | 'custom';
+}
+
+/**
+ * User's unlocked achievement - stored in database
+ */
+export interface UserAchievement {
+  id: string;
+  userId: string;
+  achievementId: string;
+  unlockedAt: string; // ISO date string
+}
+
+/**
+ * Achievement with progress - computed at runtime
+ */
+export interface AchievementProgress {
+  definition: AchievementDefinition;
+  currentValue: number;
+  isUnlocked: boolean;
+  unlockedAt?: string;
+  progressPercent: number; // 0-100
+}
+
+// ============================================
 // Computed/Derived Types (not stored)
 // ============================================
 
@@ -120,6 +224,25 @@ export interface IpcApi {
   addWeightEntry: (entry: Omit<WeightEntry, 'id' | 'createdAt'>) => Promise<WeightEntry>;
   deleteWeightEntry: (id: string) => Promise<void>;
 
+  // Workout operations
+  getWorkouts: (userId: string, startDate?: string, endDate?: string) => Promise<Workout[]>;
+  getWorkout: (id: string) => Promise<Workout | null>;
+  createWorkout: (workout: Omit<Workout, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Workout>;
+  updateWorkout: (id: string, updates: Partial<Omit<Workout, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<Workout>;
+  deleteWorkout: (id: string) => Promise<void>;
+
+  // Run operations
+  getRuns: (userId: string, startDate?: string, endDate?: string) => Promise<Run[]>;
+  getRun: (id: string) => Promise<Run | null>;
+  createRun: (run: Omit<Run, 'id' | 'createdAt' | 'updatedAt' | 'pace'>) => Promise<Run>;
+  updateRun: (id: string, updates: Partial<Omit<Run, 'id' | 'createdAt' | 'updatedAt' | 'pace'>>) => Promise<Run>;
+  deleteRun: (id: string) => Promise<void>;
+
+  // Achievement operations
+  getUserAchievements: (userId: string) => Promise<UserAchievement[]>;
+  unlockAchievement: (userId: string, achievementId: string) => Promise<UserAchievement>;
+  getAchievementStats: (userId: string) => Promise<AchievementStats>;
+
   // Computed data
   getStreak: (goalId: string) => Promise<Streak>;
   getMonthSummary: (userId: string, month: string) => Promise<MonthSummary>;
@@ -127,6 +250,21 @@ export interface IpcApi {
   // App settings
   getSettings: () => Promise<AppSettings>;
   updateSettings: (settings: Partial<AppSettings>) => Promise<AppSettings>;
+}
+
+/**
+ * Achievement statistics for a user
+ */
+export interface AchievementStats {
+  totalWorkouts: number;
+  totalRuns: number;
+  totalMiles: number;
+  currentStreak: number;
+  longestStreak: number;
+  weightLost: number; // Difference from first to lowest weight
+  firstWeightEntry: number | null;
+  lowestWeight: number | null;
+  latestWeight: number | null;
 }
 
 export interface AppSettings {
@@ -152,6 +290,10 @@ export interface UpdaterApi {
   onError: (callback: (error: string) => void) => () => void;
 }
 
+export interface AppInfoApi {
+  getVersion: () => Promise<string>;
+}
+
 // ============================================
 // Window API Declaration
 // ============================================
@@ -160,6 +302,7 @@ declare global {
   interface Window {
     api: IpcApi;
     updater: UpdaterApi;
+    appInfo: AppInfoApi;
   }
 }
 

@@ -7,7 +7,7 @@
 
 import { create } from 'zustand';
 
-export type Page = 'calendar' | 'workouts' | 'running' | 'goals' | 'settings';
+export type Page = 'dashboard' | 'calendar' | 'workouts' | 'running' | 'weight' | 'goals' | 'achievements' | 'settings';
 
 interface NavigationState {
   currentPage: Page;
@@ -18,7 +18,7 @@ interface NavigationState {
 }
 
 export const useNavigationStore = create<NavigationState>((set) => ({
-  currentPage: 'calendar',
+  currentPage: 'dashboard',
   sidebarCollapsed: false,
   navigate: (page: Page) => set({ currentPage: page }),
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),

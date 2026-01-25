@@ -72,6 +72,43 @@ CREATE TABLE IF NOT EXISTS weight_entries (
   UNIQUE (user_id, date)
 );
 
+-- Workouts table
+-- Stores workout sessions with exercises as JSON
+CREATE TABLE IF NOT EXISTS workouts (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  date TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('strength', 'cardio', 'flexibility', 'sports', 'other')),
+  name TEXT NOT NULL,
+  exercises TEXT NOT NULL DEFAULT '[]',
+  duration INTEGER,
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Runs table
+-- Stores running activities with distance, duration, pace
+CREATE TABLE IF NOT EXISTS runs (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  date TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('easy', 'tempo', 'interval', 'long', 'recovery', 'race')),
+  distance REAL NOT NULL,
+  duration REAL NOT NULL,
+  pace REAL,
+  calories INTEGER,
+  heart_rate_avg INTEGER,
+  heart_rate_max INTEGER,
+  elevation REAL,
+  route TEXT,
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- App settings (single row table)
 CREATE TABLE IF NOT EXISTS settings (
   id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -82,6 +119,18 @@ CREATE TABLE IF NOT EXISTS settings (
   FOREIGN KEY (last_active_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
+-- User achievements table
+-- Tracks which achievements each user has unlocked
+-- Achievement definitions are static in code, only unlocks are stored
+CREATE TABLE IF NOT EXISTS user_achievements (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  achievement_id TEXT NOT NULL,
+  unlocked_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE (user_id, achievement_id)
+);
+
 -- Insert default settings row
 INSERT OR IGNORE INTO settings (id) VALUES (1);
 
@@ -90,6 +139,9 @@ CREATE INDEX IF NOT EXISTS idx_goals_user ON goals(user_id);
 CREATE INDEX IF NOT EXISTS idx_daily_logs_user_date ON daily_logs(user_id, date);
 CREATE INDEX IF NOT EXISTS idx_daily_logs_goal_date ON daily_logs(goal_id, date);
 CREATE INDEX IF NOT EXISTS idx_weight_entries_user_date ON weight_entries(user_id, date);
+CREATE INDEX IF NOT EXISTS idx_workouts_user_date ON workouts(user_id, date);
+CREATE INDEX IF NOT EXISTS idx_runs_user_date ON runs(user_id, date);
+CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id);
 `;
 
 // No seed data needed - users create their own profiles on first launch

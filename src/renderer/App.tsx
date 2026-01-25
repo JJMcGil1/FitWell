@@ -6,20 +6,27 @@
  */
 
 import React, { useEffect } from 'react';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { useUserStore } from './stores/userStore';
 import { useGoalStore } from './stores/goalStore';
+import { useWorkoutStore } from './stores/workoutStore';
+import { useRunStore } from './stores/runStore';
 import { useWeightStore } from './stores/weightStore';
 import { useNavigationStore } from './stores/navigationStore';
 import { useThemeStore } from './stores/themeStore';
-import { Sidebar, LoadingScreen, Onboarding, UpdateNotification } from './components';
-import { CalendarPage, WorkoutsPage, RunningPage, GoalsPage, SettingsPage } from './pages';
+// TODO: Re-enable UpdateNotification after Apple Developer Program confirmation
+// import { Sidebar, LoadingScreen, Onboarding, UpdateNotification } from './components';
+import { Sidebar, LoadingScreen, Onboarding } from './components';
+import { DashboardPage, CalendarPage, WorkoutsPage, RunningPage, WeightPage, GoalsPage, AchievementsPage, SettingsPage } from './pages';
 
 // ⚠️ DEV FLAG: Set to true to force show onboarding screen for development
 const DEV_SHOW_ONBOARDING = false;
 
 const App: React.FC = () => {
   const { initialize, currentUser, isLoading: userLoading, isSwitching, error } = useUserStore();
-  const { fetchGoals, fetchLogsForMonth, selectedMonth, reset: resetGoals } = useGoalStore();
+  const { fetchGoals, reset: resetGoals } = useGoalStore();
+  const { fetchWorkouts, reset: resetWorkouts } = useWorkoutStore();
+  const { fetchRuns, reset: resetRuns } = useRunStore();
   const { fetchEntries, reset: resetWeight } = useWeightStore();
   const { currentPage } = useNavigationStore();
 
@@ -36,11 +43,18 @@ const App: React.FC = () => {
     if (currentUser) {
       // Reset stores when switching users
       resetGoals();
+      resetWorkouts();
+      resetRuns();
       resetWeight();
 
       // Fetch new user's data
+      const today = new Date();
+      const startDate = format(startOfMonth(today), 'yyyy-MM-dd');
+      const endDate = format(endOfMonth(today), 'yyyy-MM-dd');
+
       fetchGoals(currentUser.id);
-      fetchLogsForMonth(currentUser.id, selectedMonth);
+      fetchWorkouts(currentUser.id, startDate, endDate);
+      fetchRuns(currentUser.id, startDate, endDate);
       fetchEntries(currentUser.id);
     }
   }, [currentUser?.id]);
@@ -85,18 +99,24 @@ const App: React.FC = () => {
   // Render current page
   const renderPage = () => {
     switch (currentPage) {
+      case 'dashboard':
+        return <DashboardPage />;
       case 'calendar':
         return <CalendarPage />;
       case 'workouts':
         return <WorkoutsPage />;
       case 'running':
         return <RunningPage />;
+      case 'weight':
+        return <WeightPage />;
       case 'goals':
         return <GoalsPage />;
+      case 'achievements':
+        return <AchievementsPage />;
       case 'settings':
         return <SettingsPage />;
       default:
-        return <CalendarPage />;
+        return <DashboardPage />;
     }
   };
 
@@ -110,8 +130,9 @@ const App: React.FC = () => {
         {renderPage()}
       </main>
 
-      {/* Update notification in bottom right */}
+      {/* TODO: Re-enable after Apple Developer Program confirmation
       <UpdateNotification />
+      */}
     </div>
   );
 };

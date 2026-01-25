@@ -16,6 +16,11 @@ export const GoalsPage: React.FC = () => {
   const [newGoalName, setNewGoalName] = useState('');
   const [newGoalType, setNewGoalType] = useState<GoalType>('workout');
 
+  // Edit state
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [editGoalName, setEditGoalName] = useState('');
+  const [editGoalType, setEditGoalType] = useState<GoalType>('workout');
+
   const activeGoals = goals.filter((g) => g.isActive);
   const inactiveGoals = goals.filter((g) => !g.isActive);
 
@@ -37,6 +42,31 @@ export const GoalsPage: React.FC = () => {
 
   const handleToggleActive = async (goal: Goal) => {
     await updateGoal(goal.id, { isActive: !goal.isActive });
+  };
+
+  const handleOpenEdit = (goal: Goal) => {
+    setEditingGoal(goal);
+    setEditGoalName(goal.name);
+    setEditGoalType(goal.type);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingGoal || !editGoalName.trim()) return;
+
+    await updateGoal(editingGoal.id, {
+      name: editGoalName.trim(),
+      type: editGoalType,
+    });
+
+    setEditingGoal(null);
+    setEditGoalName('');
+    setEditGoalType('workout');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingGoal(null);
+    setEditGoalName('');
+    setEditGoalType('workout');
   };
 
   const handleDelete = async (goalId: string) => {
@@ -210,6 +240,15 @@ export const GoalsPage: React.FC = () => {
                   {/* Actions */}
                   <div className="flex items-center gap-1">
                     <button
+                      onClick={() => handleOpenEdit(goal)}
+                      className="p-2 text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors"
+                      title="Edit goal"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
                       onClick={() => handleToggleActive(goal)}
                       className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
                       title="Pause goal"
@@ -266,6 +305,15 @@ export const GoalsPage: React.FC = () => {
                 {/* Actions */}
                 <div className="flex items-center gap-1">
                   <button
+                    onClick={() => handleOpenEdit(goal)}
+                    className="p-2 text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors"
+                    title="Edit goal"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button
                     onClick={() => handleToggleActive(goal)}
                     className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
                     title="Resume goal"
@@ -287,6 +335,75 @@ export const GoalsPage: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Goal Modal */}
+      {editingGoal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">Edit Goal</h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                    Goal Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editGoalName}
+                    onChange={(e) => setEditGoalName(e.target.value)}
+                    placeholder="e.g., Morning Run, Meditation, Strength Training"
+                    className="input"
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                    Goal Type
+                  </label>
+                  <div className="flex gap-2">
+                    {(['workout', 'weight', 'custom'] as GoalType[]).map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => setEditGoalType(type)}
+                        className={`
+                          flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium
+                          transition-all duration-150
+                          ${editGoalType === type
+                            ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
+                            : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-neutral-600 dark:bg-neutral-700 dark:text-gray-300 dark:hover:bg-neutral-600'
+                          }
+                        `}
+                      >
+                        {getGoalTypeIcon(type)}
+                        <span className="capitalize">{type}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 p-4 bg-gray-50 dark:bg-neutral-900 border-t border-gray-100 dark:border-neutral-700">
+              <button
+                onClick={handleCancelEdit}
+                className="btn-secondary flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={!editGoalName.trim()}
+                className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,11 +1,11 @@
 /**
  * Calendar Component
  *
- * The main UI element - a month view showing workout completion status.
+ * The main UI element - a month view showing workout/run activity.
  * Inspired by GitHub contribution graph meets Apple Health.
  */
 
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
   format,
   startOfMonth,
@@ -19,7 +19,8 @@ import {
   addMonths,
   subMonths,
 } from 'date-fns';
-import { useGoalStore } from '../stores/goalStore';
+import { useWorkoutStore } from '../stores/workoutStore';
+import { useRunStore } from '../stores/runStore';
 import { useUserStore } from '../stores/userStore';
 import { CalendarDay } from './CalendarDay';
 
@@ -27,11 +28,29 @@ type SlideDirection = 'left' | 'right' | null;
 
 export const Calendar: React.FC = () => {
   const { currentUser } = useUserStore();
-  const { selectedMonth, setSelectedMonth, fetchLogsForMonth } = useGoalStore();
+  const { fetchWorkouts } = useWorkoutStore();
+  const { fetchRuns } = useRunStore();
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [slideDirection, setSlideDirection] = useState<SlideDirection>(null);
   const animationKey = useRef(0);
 
   const today = new Date();
+
+  // Fetch activities for the month
+  const fetchActivitiesForMonth = async (month: Date) => {
+    if (!currentUser) return;
+    const startDate = format(startOfMonth(month), 'yyyy-MM-dd');
+    const endDate = format(endOfMonth(month), 'yyyy-MM-dd');
+    await Promise.all([
+      fetchWorkouts(currentUser.id, startDate, endDate),
+      fetchRuns(currentUser.id, startDate, endDate),
+    ]);
+  };
+
+  // Fetch activities when component mounts or user changes
+  useEffect(() => {
+    fetchActivitiesForMonth(selectedMonth);
+  }, [currentUser?.id]);
 
   // Generate calendar grid
   const calendarDays = useMemo(() => {
@@ -49,9 +68,7 @@ export const Calendar: React.FC = () => {
     animationKey.current += 1;
     const newMonth = subMonths(selectedMonth, 1);
     setSelectedMonth(newMonth);
-    if (currentUser) {
-      await fetchLogsForMonth(currentUser.id, newMonth);
-    }
+    await fetchActivitiesForMonth(newMonth);
   };
 
   const goToNextMonth = async () => {
@@ -59,9 +76,7 @@ export const Calendar: React.FC = () => {
     animationKey.current += 1;
     const newMonth = addMonths(selectedMonth, 1);
     setSelectedMonth(newMonth);
-    if (currentUser) {
-      await fetchLogsForMonth(currentUser.id, newMonth);
-    }
+    await fetchActivitiesForMonth(newMonth);
   };
 
   const goToToday = async () => {
@@ -70,9 +85,7 @@ export const Calendar: React.FC = () => {
     setSlideDirection(isGoingBack ? 'right' : 'left');
     animationKey.current += 1;
     setSelectedMonth(today);
-    if (currentUser) {
-      await fetchLogsForMonth(currentUser.id, today);
-    }
+    await fetchActivitiesForMonth(today);
   };
 
   const canGoNext = !isAfter(startOfMonth(selectedMonth), startOfMonth(today));

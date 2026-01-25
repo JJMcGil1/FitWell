@@ -145,6 +145,11 @@ ipcMain.handle('updater:check', async () => {
   return autoUpdater.checkForUpdates();
 });
 
+// App info handler
+ipcMain.handle('app:getVersion', () => {
+  return app.getVersion();
+});
+
 ipcMain.handle('updater:download', async () => {
   return autoUpdater.downloadUpdate();
 });

@@ -9,7 +9,7 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type { IpcApi, Goal, DailyLog, WeightEntry, AppSettings, CreateUserData } from '../shared/types';
+import type { IpcApi, Goal, DailyLog, WeightEntry, Workout, Run, AppSettings, CreateUserData } from '../shared/types';
 
 // Updater API
 const updaterApi = {
@@ -77,6 +77,30 @@ const api: IpcApi = {
     ipcRenderer.invoke('weight:add', entry),
   deleteWeightEntry: (id) => ipcRenderer.invoke('weight:delete', id),
 
+  // Workout operations
+  getWorkouts: (userId, startDate, endDate) =>
+    ipcRenderer.invoke('workouts:getAll', userId, startDate, endDate),
+  getWorkout: (id) => ipcRenderer.invoke('workouts:get', id),
+  createWorkout: (workout: Omit<Workout, 'id' | 'createdAt' | 'updatedAt'>) =>
+    ipcRenderer.invoke('workouts:create', workout),
+  updateWorkout: (id, updates) => ipcRenderer.invoke('workouts:update', id, updates),
+  deleteWorkout: (id) => ipcRenderer.invoke('workouts:delete', id),
+
+  // Run operations
+  getRuns: (userId, startDate, endDate) =>
+    ipcRenderer.invoke('runs:getAll', userId, startDate, endDate),
+  getRun: (id) => ipcRenderer.invoke('runs:get', id),
+  createRun: (run: Omit<Run, 'id' | 'createdAt' | 'updatedAt' | 'pace'>) =>
+    ipcRenderer.invoke('runs:create', run),
+  updateRun: (id, updates) => ipcRenderer.invoke('runs:update', id, updates),
+  deleteRun: (id) => ipcRenderer.invoke('runs:delete', id),
+
+  // Achievement operations
+  getUserAchievements: (userId) => ipcRenderer.invoke('achievements:getAll', userId),
+  unlockAchievement: (userId, achievementId) =>
+    ipcRenderer.invoke('achievements:unlock', userId, achievementId),
+  getAchievementStats: (userId) => ipcRenderer.invoke('achievements:getStats', userId),
+
   // Computed data
   getStreak: (goalId) => ipcRenderer.invoke('streak:get', goalId),
   getMonthSummary: (userId, month) => ipcRenderer.invoke('summary:month', userId, month),
@@ -87,5 +111,11 @@ const api: IpcApi = {
     ipcRenderer.invoke('settings:update', settings),
 };
 
+// App info API
+const appInfoApi = {
+  getVersion: () => ipcRenderer.invoke('app:getVersion'),
+};
+
 contextBridge.exposeInMainWorld('api', api);
 contextBridge.exposeInMainWorld('updater', updaterApi);
+contextBridge.exposeInMainWorld('appInfo', appInfoApi);

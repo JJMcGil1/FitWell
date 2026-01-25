@@ -5,70 +5,16 @@
  * Includes full user/profile management with first/last name, birthday, photo.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useUserStore } from '../stores/userStore';
 import { useThemeStore } from '../stores/themeStore';
+import { Dropdown } from '../components';
 
 // Avatar color options
 const AVATAR_COLORS = [
   '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#ef4444', '#f97316',
   '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#64748b',
 ];
-
-interface SettingsSectionProps {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}
-
-const SettingsSection: React.FC<SettingsSectionProps> = ({ title, description, children }) => (
-  <div className="py-6 first:pt-0">
-    <div className="mb-4">
-      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
-      {description && (
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
-      )}
-    </div>
-    <div className="space-y-3">
-      {children}
-    </div>
-  </div>
-);
-
-interface SettingsRowProps {
-  icon: React.ReactNode;
-  label: string;
-  description?: string;
-  action?: React.ReactNode;
-  onClick?: () => void;
-  danger?: boolean;
-}
-
-const SettingsRow: React.FC<SettingsRowProps> = ({ icon, label, description, action, onClick, danger }) => (
-  <div
-    className={`
-      flex items-center gap-4 p-3 -mx-3 rounded-lg
-      ${onClick ? 'hover:bg-gray-100 dark:hover:bg-neutral-700 cursor-pointer transition-colors duration-150' : ''}
-    `}
-    onClick={onClick}
-    role={onClick ? 'button' : undefined}
-  >
-    <div className={`w-9 h-9 rounded-lg ${danger ? 'bg-red-50 dark:bg-red-900/20' : 'bg-gray-100 dark:bg-neutral-700'} flex items-center justify-center ${danger ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'} flex-shrink-0`}>
-      {icon}
-    </div>
-    <div className="flex-1 min-w-0">
-      <span className={`text-sm font-medium ${danger ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'} block`}>{label}</span>
-      {description && (
-        <span className="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">{description}</span>
-      )}
-    </div>
-    {action && (
-      <div className="flex-shrink-0">
-        {action}
-      </div>
-    )}
-  </div>
-);
 
 // Helper to get initials from first/last name
 const getInitials = (firstName?: string, lastName?: string) => {
@@ -106,7 +52,12 @@ export const SettingsPage: React.FC = () => {
   const editFileInputRef = useRef<HTMLInputElement>(null);
   const addFileInputRef = useRef<HTMLInputElement>(null);
 
-  const appVersion = '1.0.0';
+  const [appVersion, setAppVersion] = useState<string>('');
+
+  // Fetch app version on mount
+  useEffect(() => {
+    window.appInfo.getVersion().then(setAppVersion).catch(() => setAppVersion('unknown'));
+  }, []);
 
   // Open edit modal
   const handleOpenEdit = () => {
@@ -215,8 +166,8 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="p-8 max-w-2xl">
-      {/* Header */}
+    <div className="h-full overflow-y-auto p-6 pb-8">
+      {/* Header - matches Dashboard layout */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h2>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
@@ -224,37 +175,41 @@ export const SettingsPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Settings content */}
-      <div className="card divide-y divide-gray-100 dark:divide-neutral-700">
+      {/* Settings content - separate cards per section like Dashboard */}
+      <div className="max-w-2xl space-y-6">
+
         {/* Profiles Section */}
-        <div className="px-5">
-          <SettingsSection title="Profiles" description="Manage who uses FitWell on this device">
-            {/* Current profile */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-neutral-400">Profiles</h3>
+          </div>
+          <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-700 overflow-hidden">
+            {/* Current profile - highlighted */}
             {currentUser && (
-              <div className="flex items-center gap-4 p-3 -mx-3 rounded-lg bg-brand-50/50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-800">
+              <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-brand-50/50 to-transparent dark:from-brand-900/10 dark:to-transparent border-b border-gray-100 dark:border-neutral-700">
                 {currentUser.profilePhoto ? (
                   <img
                     src={currentUser.profilePhoto}
                     alt={currentUser.name}
-                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                    className="w-12 h-12 rounded-full object-cover flex-shrink-0 ring-2 ring-brand-500/20"
                   />
                 ) : (
                   <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0"
+                    className="w-12 h-12 rounded-full flex items-center justify-center text-white text-base font-semibold flex-shrink-0 ring-2 ring-white/20"
                     style={{ backgroundColor: currentUser.avatarColor }}
                   >
                     {getInitials(currentUser.firstName, currentUser.lastName)}
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100 block truncate">
+                  <span className="text-base font-semibold text-gray-900 dark:text-gray-100 block truncate">
                     {currentUser.name}
                   </span>
-                  <span className="text-xs text-brand-600 dark:text-brand-400 block mt-0.5">Current profile</span>
+                  <span className="text-xs text-brand-600 dark:text-brand-400 font-medium">Active profile</span>
                 </div>
                 <button
                   onClick={handleOpenEdit}
-                  className="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium px-3 py-1.5 rounded-md hover:bg-brand-100 dark:hover:bg-brand-900/30 transition-colors"
+                  className="text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-medium px-4 py-2 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all duration-150"
                 >
                   Edit
                 </button>
@@ -263,7 +218,7 @@ export const SettingsPage: React.FC = () => {
 
             {/* Other profiles */}
             {users.filter(u => u.id !== currentUser?.id).map((user) => (
-              <div key={user.id} className="flex items-center gap-4 p-3 -mx-3 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors">
+              <div key={user.id} className="flex items-center gap-4 p-4 border-b border-gray-100 dark:border-neutral-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors">
                 {user.profilePhoto ? (
                   <img
                     src={user.profilePhoto}
@@ -285,13 +240,13 @@ export const SettingsPage: React.FC = () => {
                 </div>
                 <button
                   onClick={() => switchUser(user.id)}
-                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 font-medium px-3 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-neutral-600 transition-colors"
+                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 font-medium px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-600 transition-colors"
                 >
                   Switch
                 </button>
                 <button
                   onClick={() => handleDeleteProfile(user.id, user.name)}
-                  className="text-sm text-red-500 hover:text-red-600 font-medium p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   title="Delete profile"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -304,58 +259,68 @@ export const SettingsPage: React.FC = () => {
             {/* Add profile button */}
             <button
               onClick={() => setIsAddingProfile(true)}
-              className="flex items-center gap-4 p-3 -mx-3 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors w-full text-left"
+              className="flex items-center gap-3 w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-neutral-700/50 transition-colors group"
             >
-              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-200 dark:bg-neutral-600 text-gray-500 dark:text-gray-400 flex-shrink-0">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 dark:bg-neutral-700 text-gray-400 dark:text-gray-500 group-hover:bg-brand-50 group-hover:text-brand-500 dark:group-hover:bg-brand-900/20 dark:group-hover:text-brand-400 transition-colors">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
               </div>
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Add new profile</span>
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors">Add new profile</span>
             </button>
-          </SettingsSection>
-        </div>
+          </div>
+        </section>
 
         {/* Appearance Section */}
-        <div className="px-5">
-          <SettingsSection title="Appearance" description="Customize how FitWell looks">
-            <SettingsRow
-              icon={
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-neutral-400">Appearance</h3>
+          </div>
+          <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-700 p-4">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-neutral-700 flex items-center justify-center text-gray-500 dark:text-gray-400">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                 </svg>
-              }
-              label="Theme"
-              description={theme === 'system' ? 'System default' : theme === 'dark' ? 'Dark mode' : 'Light mode'}
-              action={
-                <select
-                  className="text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-neutral-700 border-0 rounded-md py-1.5 px-3 focus:ring-2 focus:ring-brand-500/30"
-                  value={theme}
-                  onChange={(e) => setTheme(e.target.value as 'light' | 'dark' | 'system')}
-                >
-                  <option value="system">System</option>
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
-              }
-            />
-          </SettingsSection>
-        </div>
+              </div>
+              <div className="flex-1">
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100 block">Theme</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {theme === 'system' ? 'Matches your system' : theme === 'dark' ? 'Always dark' : 'Always light'}
+                </span>
+              </div>
+              <Dropdown
+                options={[
+                  { value: 'system', label: 'System' },
+                  { value: 'light', label: 'Light' },
+                  { value: 'dark', label: 'Dark' },
+                ]}
+                value={theme}
+                onChange={(value) => setTheme(value as 'light' | 'dark' | 'system')}
+              />
+            </div>
+          </div>
+        </section>
 
         {/* About Section */}
-        <div className="px-5">
-          <SettingsSection title="About">
-            <SettingsRow
-              icon={
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-neutral-400">About</h3>
+          </div>
+          <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-100 dark:border-neutral-700 p-4">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-neutral-700 flex items-center justify-center text-gray-500 dark:text-gray-400">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-              }
-              label="Version"
-              description={`FitWell v${appVersion}`}
-            />
-          </SettingsSection>
-        </div>
+              </div>
+              <div className="flex-1">
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100 block">Version</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">FitWell v{appVersion}</span>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
       {/* Edit Profile Modal */}

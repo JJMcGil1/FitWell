@@ -7,7 +7,7 @@
 
 import { ipcMain } from 'electron';
 import * as db from '../database';
-import type { Goal, DailyLog, WeightEntry, AppSettings } from '../../shared/types';
+import type { Goal, DailyLog, WeightEntry, Workout, Run, AppSettings, UserAchievement } from '../../shared/types';
 
 export function registerIpcHandlers(): void {
   // ========================================
@@ -108,6 +108,72 @@ export function registerIpcHandlers(): void {
   });
 
   // ========================================
+  // Workout Handlers
+  // ========================================
+
+  ipcMain.handle(
+    'workouts:getAll',
+    (_, userId: string, startDate?: string, endDate?: string) => {
+      return db.getWorkouts(userId, startDate, endDate);
+    }
+  );
+
+  ipcMain.handle('workouts:get', (_, id: string) => {
+    return db.getWorkout(id);
+  });
+
+  ipcMain.handle(
+    'workouts:create',
+    (_, workout: Omit<Workout, 'id' | 'createdAt' | 'updatedAt'>) => {
+      return db.createWorkout(workout);
+    }
+  );
+
+  ipcMain.handle(
+    'workouts:update',
+    (_, id: string, updates: Partial<Omit<Workout, 'id' | 'createdAt' | 'updatedAt'>>) => {
+      return db.updateWorkout(id, updates);
+    }
+  );
+
+  ipcMain.handle('workouts:delete', (_, id: string) => {
+    db.deleteWorkout(id);
+  });
+
+  // ========================================
+  // Run Handlers
+  // ========================================
+
+  ipcMain.handle(
+    'runs:getAll',
+    (_, userId: string, startDate?: string, endDate?: string) => {
+      return db.getRuns(userId, startDate, endDate);
+    }
+  );
+
+  ipcMain.handle('runs:get', (_, id: string) => {
+    return db.getRun(id);
+  });
+
+  ipcMain.handle(
+    'runs:create',
+    (_, run: Omit<Run, 'id' | 'createdAt' | 'updatedAt' | 'pace'>) => {
+      return db.createRun(run);
+    }
+  );
+
+  ipcMain.handle(
+    'runs:update',
+    (_, id: string, updates: Partial<Omit<Run, 'id' | 'createdAt' | 'updatedAt' | 'pace'>>) => {
+      return db.updateRun(id, updates);
+    }
+  );
+
+  ipcMain.handle('runs:delete', (_, id: string) => {
+    db.deleteRun(id);
+  });
+
+  // ========================================
   // Computed Data Handlers
   // ========================================
 
@@ -129,6 +195,22 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('settings:update', (_, updates: Partial<AppSettings>) => {
     return db.updateSettings(updates);
+  });
+
+  // ========================================
+  // Achievement Handlers
+  // ========================================
+
+  ipcMain.handle('achievements:getAll', (_, userId: string) => {
+    return db.getUserAchievements(userId);
+  });
+
+  ipcMain.handle('achievements:unlock', (_, userId: string, achievementId: string) => {
+    return db.unlockAchievement(userId, achievementId);
+  });
+
+  ipcMain.handle('achievements:getStats', (_, userId: string) => {
+    return db.getAchievementStats(userId);
   });
 
   console.log('[IPC] All handlers registered');

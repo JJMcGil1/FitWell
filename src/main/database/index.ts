@@ -15,9 +15,14 @@ import type {
   Goal,
   DailyLog,
   WeightEntry,
+  Workout,
+  Exercise,
+  Run,
   AppSettings,
   Streak,
   MonthSummary,
+  UserAchievement,
+  AchievementStats,
 } from '../../shared/types';
 
 let db: Database.Database | null = null;
@@ -603,6 +608,380 @@ export function deleteWeightEntry(id: string): void {
 }
 
 // ============================================
+// Workout Operations
+// ============================================
+
+export function getWorkouts(
+  userId: string,
+  startDate?: string,
+  endDate?: string
+): Workout[] {
+  let query = 'SELECT * FROM workouts WHERE user_id = ?';
+  const params: string[] = [userId];
+
+  if (startDate) {
+    query += ' AND date >= ?';
+    params.push(startDate);
+  }
+  if (endDate) {
+    query += ' AND date <= ?';
+    params.push(endDate);
+  }
+
+  query += ' ORDER BY date DESC, created_at DESC';
+
+  const rows = getDatabase().prepare(query).all(...params) as Array<{
+    id: string;
+    user_id: string;
+    date: string;
+    type: string;
+    name: string;
+    exercises: string;
+    duration: number | null;
+    notes: string | null;
+    created_at: string;
+    updated_at: string;
+  }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    date: row.date,
+    type: row.type as Workout['type'],
+    name: row.name,
+    exercises: JSON.parse(row.exercises) as Exercise[],
+    duration: row.duration ?? undefined,
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }));
+}
+
+export function getWorkout(id: string): Workout | null {
+  const row = getDatabase()
+    .prepare('SELECT * FROM workouts WHERE id = ?')
+    .get(id) as {
+    id: string;
+    user_id: string;
+    date: string;
+    type: string;
+    name: string;
+    exercises: string;
+    duration: number | null;
+    notes: string | null;
+    created_at: string;
+    updated_at: string;
+  } | undefined;
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    date: row.date,
+    type: row.type as Workout['type'],
+    name: row.name,
+    exercises: JSON.parse(row.exercises) as Exercise[],
+    duration: row.duration ?? undefined,
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function createWorkout(
+  workout: Omit<Workout, 'id' | 'createdAt' | 'updatedAt'>
+): Workout {
+  const id = `workout_${uuidv4()}`;
+  const now = new Date().toISOString();
+
+  getDatabase()
+    .prepare(
+      `INSERT INTO workouts (id, user_id, date, type, name, exercises, duration, notes, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      id,
+      workout.userId,
+      workout.date,
+      workout.type,
+      workout.name,
+      JSON.stringify(workout.exercises),
+      workout.duration ?? null,
+      workout.notes ?? null,
+      now,
+      now
+    );
+
+  return {
+    ...workout,
+    id,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+export function updateWorkout(
+  id: string,
+  updates: Partial<Omit<Workout, 'id' | 'createdAt' | 'updatedAt'>>
+): Workout {
+  const now = new Date().toISOString();
+  const setClauses: string[] = ['updated_at = ?'];
+  const values: (string | number | null)[] = [now];
+
+  if (updates.date !== undefined) {
+    setClauses.push('date = ?');
+    values.push(updates.date);
+  }
+  if (updates.type !== undefined) {
+    setClauses.push('type = ?');
+    values.push(updates.type);
+  }
+  if (updates.name !== undefined) {
+    setClauses.push('name = ?');
+    values.push(updates.name);
+  }
+  if (updates.exercises !== undefined) {
+    setClauses.push('exercises = ?');
+    values.push(JSON.stringify(updates.exercises));
+  }
+  if (updates.duration !== undefined) {
+    setClauses.push('duration = ?');
+    values.push(updates.duration ?? null);
+  }
+  if (updates.notes !== undefined) {
+    setClauses.push('notes = ?');
+    values.push(updates.notes ?? null);
+  }
+
+  values.push(id);
+  getDatabase()
+    .prepare(`UPDATE workouts SET ${setClauses.join(', ')} WHERE id = ?`)
+    .run(...values);
+
+  return getWorkout(id)!;
+}
+
+export function deleteWorkout(id: string): void {
+  getDatabase().prepare('DELETE FROM workouts WHERE id = ?').run(id);
+}
+
+// ============================================
+// Run Operations
+// ============================================
+
+export function getRuns(
+  userId: string,
+  startDate?: string,
+  endDate?: string
+): Run[] {
+  let query = 'SELECT * FROM runs WHERE user_id = ?';
+  const params: string[] = [userId];
+
+  if (startDate) {
+    query += ' AND date >= ?';
+    params.push(startDate);
+  }
+  if (endDate) {
+    query += ' AND date <= ?';
+    params.push(endDate);
+  }
+
+  query += ' ORDER BY date DESC, created_at DESC';
+
+  const rows = getDatabase().prepare(query).all(...params) as Array<{
+    id: string;
+    user_id: string;
+    date: string;
+    type: string;
+    distance: number;
+    duration: number;
+    pace: number | null;
+    calories: number | null;
+    heart_rate_avg: number | null;
+    heart_rate_max: number | null;
+    elevation: number | null;
+    route: string | null;
+    notes: string | null;
+    created_at: string;
+    updated_at: string;
+  }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    date: row.date,
+    type: row.type as Run['type'],
+    distance: row.distance,
+    duration: row.duration,
+    pace: row.pace ?? undefined,
+    calories: row.calories ?? undefined,
+    heartRateAvg: row.heart_rate_avg ?? undefined,
+    heartRateMax: row.heart_rate_max ?? undefined,
+    elevation: row.elevation ?? undefined,
+    route: row.route ?? undefined,
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }));
+}
+
+export function getRun(id: string): Run | null {
+  const row = getDatabase()
+    .prepare('SELECT * FROM runs WHERE id = ?')
+    .get(id) as {
+    id: string;
+    user_id: string;
+    date: string;
+    type: string;
+    distance: number;
+    duration: number;
+    pace: number | null;
+    calories: number | null;
+    heart_rate_avg: number | null;
+    heart_rate_max: number | null;
+    elevation: number | null;
+    route: string | null;
+    notes: string | null;
+    created_at: string;
+    updated_at: string;
+  } | undefined;
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    date: row.date,
+    type: row.type as Run['type'],
+    distance: row.distance,
+    duration: row.duration,
+    pace: row.pace ?? undefined,
+    calories: row.calories ?? undefined,
+    heartRateAvg: row.heart_rate_avg ?? undefined,
+    heartRateMax: row.heart_rate_max ?? undefined,
+    elevation: row.elevation ?? undefined,
+    route: row.route ?? undefined,
+    notes: row.notes ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function createRun(
+  run: Omit<Run, 'id' | 'createdAt' | 'updatedAt' | 'pace'>
+): Run {
+  const id = `run_${uuidv4()}`;
+  const now = new Date().toISOString();
+  // Calculate pace: minutes per mile
+  const pace = run.distance > 0 ? run.duration / run.distance : null;
+
+  getDatabase()
+    .prepare(
+      `INSERT INTO runs (id, user_id, date, type, distance, duration, pace, calories, heart_rate_avg, heart_rate_max, elevation, route, notes, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      id,
+      run.userId,
+      run.date,
+      run.type,
+      run.distance,
+      run.duration,
+      pace,
+      run.calories ?? null,
+      run.heartRateAvg ?? null,
+      run.heartRateMax ?? null,
+      run.elevation ?? null,
+      run.route ?? null,
+      run.notes ?? null,
+      now,
+      now
+    );
+
+  return {
+    ...run,
+    id,
+    pace: pace ?? undefined,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+export function updateRun(
+  id: string,
+  updates: Partial<Omit<Run, 'id' | 'createdAt' | 'updatedAt' | 'pace'>>
+): Run {
+  const now = new Date().toISOString();
+  const setClauses: string[] = ['updated_at = ?'];
+  const values: (string | number | null)[] = [now];
+
+  if (updates.date !== undefined) {
+    setClauses.push('date = ?');
+    values.push(updates.date);
+  }
+  if (updates.type !== undefined) {
+    setClauses.push('type = ?');
+    values.push(updates.type);
+  }
+  if (updates.distance !== undefined) {
+    setClauses.push('distance = ?');
+    values.push(updates.distance);
+  }
+  if (updates.duration !== undefined) {
+    setClauses.push('duration = ?');
+    values.push(updates.duration);
+  }
+  if (updates.calories !== undefined) {
+    setClauses.push('calories = ?');
+    values.push(updates.calories ?? null);
+  }
+  if (updates.heartRateAvg !== undefined) {
+    setClauses.push('heart_rate_avg = ?');
+    values.push(updates.heartRateAvg ?? null);
+  }
+  if (updates.heartRateMax !== undefined) {
+    setClauses.push('heart_rate_max = ?');
+    values.push(updates.heartRateMax ?? null);
+  }
+  if (updates.elevation !== undefined) {
+    setClauses.push('elevation = ?');
+    values.push(updates.elevation ?? null);
+  }
+  if (updates.route !== undefined) {
+    setClauses.push('route = ?');
+    values.push(updates.route ?? null);
+  }
+  if (updates.notes !== undefined) {
+    setClauses.push('notes = ?');
+    values.push(updates.notes ?? null);
+  }
+
+  // Recalculate pace if distance or duration changed
+  if (updates.distance !== undefined || updates.duration !== undefined) {
+    const current = getRun(id);
+    if (current) {
+      const newDistance = updates.distance ?? current.distance;
+      const newDuration = updates.duration ?? current.duration;
+      const pace = newDistance > 0 ? newDuration / newDistance : null;
+      setClauses.push('pace = ?');
+      values.push(pace);
+    }
+  }
+
+  values.push(id);
+  getDatabase()
+    .prepare(`UPDATE runs SET ${setClauses.join(', ')} WHERE id = ?`)
+    .run(...values);
+
+  return getRun(id)!;
+}
+
+export function deleteRun(id: string): void {
+  getDatabase().prepare('DELETE FROM runs WHERE id = ?').run(id);
+}
+
+// ============================================
 // Computed Data
 // ============================================
 
@@ -748,4 +1127,141 @@ export function updateSettings(updates: Partial<AppSettings>): AppSettings {
   }
 
   return getSettings();
+}
+
+// ============================================
+// Achievement Operations
+// ============================================
+
+export function getUserAchievements(userId: string): UserAchievement[] {
+  const rows = getDatabase()
+    .prepare('SELECT * FROM user_achievements WHERE user_id = ? ORDER BY unlocked_at DESC')
+    .all(userId) as Array<{
+      id: string;
+      user_id: string;
+      achievement_id: string;
+      unlocked_at: string;
+    }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    achievementId: row.achievement_id,
+    unlockedAt: row.unlocked_at,
+  }));
+}
+
+export function unlockAchievement(userId: string, achievementId: string): UserAchievement {
+  const id = `ach_${uuidv4()}`;
+  const now = new Date().toISOString();
+
+  // Use INSERT OR IGNORE to prevent duplicate unlocks
+  getDatabase()
+    .prepare(
+      `INSERT OR IGNORE INTO user_achievements (id, user_id, achievement_id, unlocked_at)
+       VALUES (?, ?, ?, ?)`
+    )
+    .run(id, userId, achievementId, now);
+
+  // Return the existing or new achievement
+  const row = getDatabase()
+    .prepare('SELECT * FROM user_achievements WHERE user_id = ? AND achievement_id = ?')
+    .get(userId, achievementId) as {
+      id: string;
+      user_id: string;
+      achievement_id: string;
+      unlocked_at: string;
+    };
+
+  return {
+    id: row.id,
+    userId: row.user_id,
+    achievementId: row.achievement_id,
+    unlockedAt: row.unlocked_at,
+  };
+}
+
+export function getAchievementStats(userId: string): AchievementStats {
+  // Get total workouts
+  const workoutCount = getDatabase()
+    .prepare('SELECT COUNT(*) as count FROM workouts WHERE user_id = ?')
+    .get(userId) as { count: number };
+
+  // Get total runs and miles
+  const runStats = getDatabase()
+    .prepare('SELECT COUNT(*) as count, COALESCE(SUM(distance), 0) as total_miles FROM runs WHERE user_id = ?')
+    .get(userId) as { count: number; total_miles: number };
+
+  // Calculate streak from workout dates (consecutive days with workouts)
+  const workoutDates = getDatabase()
+    .prepare('SELECT DISTINCT date FROM workouts WHERE user_id = ? ORDER BY date DESC')
+    .all(userId) as Array<{ date: string }>;
+
+  let currentStreak = 0;
+  let longestStreak = 0;
+
+  if (workoutDates.length > 0) {
+    const dates = workoutDates.map((r) => r.date);
+    const dateSet = new Set(dates);
+
+    // Calculate current streak (consecutive days from today or yesterday)
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    let checkDate = dates[0] === today || dates[0] === yesterday ? dates[0] : null;
+
+    if (checkDate) {
+      let d = new Date(checkDate);
+      while (dateSet.has(d.toISOString().split('T')[0])) {
+        currentStreak++;
+        d = new Date(d.getTime() - 86400000);
+      }
+    }
+
+    // Calculate longest streak
+    let tempStreak = 1;
+    for (let i = 1; i < dates.length; i++) {
+      const prevDate = new Date(dates[i - 1]);
+      const currDate = new Date(dates[i]);
+      const diff = (prevDate.getTime() - currDate.getTime()) / 86400000;
+
+      if (diff === 1) {
+        tempStreak++;
+      } else {
+        longestStreak = Math.max(longestStreak, tempStreak);
+        tempStreak = 1;
+      }
+    }
+    longestStreak = Math.max(longestStreak, tempStreak, currentStreak);
+  }
+
+  // Get weight stats for weight loss calculation
+  const weightEntries = getDatabase()
+    .prepare('SELECT weight FROM weight_entries WHERE user_id = ? ORDER BY date ASC')
+    .all(userId) as Array<{ weight: number }>;
+
+  let firstWeightEntry: number | null = null;
+  let lowestWeight: number | null = null;
+  let latestWeight: number | null = null;
+  let weightLost = 0;
+
+  if (weightEntries.length > 0) {
+    firstWeightEntry = weightEntries[0].weight;
+    latestWeight = weightEntries[weightEntries.length - 1].weight;
+    lowestWeight = Math.min(...weightEntries.map((e) => e.weight));
+    // Weight lost is difference from first entry to lowest recorded
+    weightLost = Math.max(0, firstWeightEntry - lowestWeight);
+  }
+
+  return {
+    totalWorkouts: workoutCount.count,
+    totalRuns: runStats.count,
+    totalMiles: runStats.total_miles,
+    currentStreak,
+    longestStreak,
+    weightLost,
+    firstWeightEntry,
+    lowestWeight,
+    latestWeight,
+  };
 }

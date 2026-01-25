@@ -1,14 +1,15 @@
 /**
  * CalendarDay Component
  *
- * Uses optimistic updates - UI updates instantly, no flicker.
- * Premium check animation with centered alignment.
- * Streak connectors for consecutive completed days.
+ * Shows workout/run activity for each day.
+ * Days with any workout or run are marked as complete.
+ * Click to quick-log a workout or remove it.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { useGoalStore } from '../stores/goalStore';
+import { useWorkoutStore } from '../stores/workoutStore';
+import { useRunStore } from '../stores/runStore';
 import { useUserStore } from '../stores/userStore';
 
 interface CalendarDayProps {
@@ -25,49 +26,46 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
   isFuture,
 }) => {
   const { currentUser } = useUserStore();
-  const { goals, getDayStatus, toggleDay } = useGoalStore();
-
-  const [optimisticComplete, setOptimisticComplete] = useState<boolean | null>(null);
+  const { getWorkoutsByDate, createWorkout, deleteWorkout } = useWorkoutStore();
+  const { getRunsByDate } = useRunStore();
   const [isPending, setIsPending] = useState(false);
-  const [animateCheck, setAnimateCheck] = useState(false);
 
   const dateStr = format(date, 'yyyy-MM-dd');
   const dayNum = format(date, 'd');
-  const status = getDayStatus(dateStr);
 
-  const activeGoals = goals.filter((g) => g.isActive);
-  const hasGoals = activeGoals.length > 0;
+  // Get workouts and runs for this day
+  const workouts = getWorkoutsByDate(dateStr);
+  const runs = getRunsByDate(dateStr);
 
-  const isComplete = optimisticComplete !== null ? optimisticComplete : status.isFullyComplete;
-  const canInteract = hasGoals && isCurrentMonth && !isFuture;
+  const hasWorkouts = workouts.length > 0;
+  const hasRuns = runs.length > 0;
+  const hasActivity = hasWorkouts || hasRuns;
 
-  // Reset animation state when completion changes
-  useEffect(() => {
-    if (!isComplete) {
-      setAnimateCheck(false);
-    }
-  }, [isComplete]);
+  const canInteract = isCurrentMonth && !isFuture;
 
+  // Simple toggle: click to check off, click again to uncheck
   const handleClick = async () => {
     if (!canInteract || !currentUser || isPending) return;
 
-    const newValue = !isComplete;
-    setOptimisticComplete(newValue);
     setIsPending(true);
-
-    // Trigger animation only when completing
-    if (newValue) {
-      setAnimateCheck(true);
-    }
-
     try {
-      const primaryGoal = activeGoals[0];
-      await toggleDay(currentUser.id, primaryGoal.id, dateStr);
-      setOptimisticComplete(null);
+      if (hasWorkouts) {
+        // Uncheck - delete all workouts for this day
+        for (const workout of workouts) {
+          await deleteWorkout(workout.id);
+        }
+      } else {
+        // Check off - create a workout entry
+        await createWorkout({
+          userId: currentUser.id,
+          date: dateStr,
+          type: 'other',
+          name: 'Workout',
+          exercises: [],
+        });
+      }
     } catch (error) {
-      console.error('Failed to toggle day:', error);
-      setOptimisticComplete(null);
-      setAnimateCheck(false);
+      console.error('Failed to toggle workout:', error);
     } finally {
       setIsPending(false);
     }
@@ -76,8 +74,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
   const getVisualState = () => {
     if (!isCurrentMonth) return 'outside';
     if (isFuture) return 'future';
-    if (isComplete) return 'complete';
-    if (status.completedGoals.length > 0) return 'partial';
+    if (hasActivity) return 'complete';
     return 'default';
   };
 
@@ -94,10 +91,10 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
         transition-transform duration-200 ease-out will-change-transform
         ${canInteract ? 'cursor-pointer hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]' : 'cursor-default'}
       `}
-      aria-label={`${format(date, 'MMMM d, yyyy')}${isComplete ? ' - Complete' : ''}`}
+      aria-label={`${format(date, 'MMMM d, yyyy')}${hasActivity ? ' - Has activity' : ''}`}
     >
       {/* Hover background */}
-      {canInteract && !isComplete && (
+      {canInteract && !hasActivity && (
         <div className="
           absolute inset-[3px] rounded-lg
           bg-transparent group-hover:bg-gray-100 dark:group-hover:bg-neutral-800
@@ -105,12 +102,12 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
         " />
       )}
 
-      {/* Completion background */}
+      {/* Activity background */}
       <div
         className={`
           absolute inset-[3px] rounded-lg
           border-2 transition-all duration-200 ease-out
-          ${isComplete
+          ${hasActivity
             ? 'bg-emerald-400/40 dark:bg-emerald-400/30 border-emerald-500 dark:border-emerald-400 opacity-100 scale-100'
             : 'bg-transparent border-transparent opacity-0 scale-95'
           }
@@ -123,8 +120,8 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
           relative z-10
           text-[15px] tabular-nums select-none
           transition-all duration-200 ease-out
-          ${isComplete ? 'opacity-0 scale-75' : 'opacity-100 scale-100'}
-          ${isToday && !isComplete
+          ${hasActivity ? 'opacity-0 scale-75' : 'opacity-100 scale-100'}
+          ${isToday && !hasActivity
             ? 'min-w-[32px] h-8 px-2 flex items-center justify-center rounded-full bg-brand-500 text-white font-semibold'
             : getTextClasses(visualState, isToday)
           }
@@ -133,21 +130,20 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
         {dayNum}
       </span>
 
-      {/* Centered checkmark with today underline */}
+      {/* Centered checkmark */}
       <div
         className={`
-          absolute inset-0 flex flex-col items-center justify-center gap-1
+          absolute inset-0 flex items-center justify-center
           transition-all duration-200 ease-out
-          ${isComplete ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}
+          ${hasActivity ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}
         `}
       >
         <svg
-          className={`w-6 h-6 text-white drop-shadow-sm ${animateCheck ? 'check-animate' : ''}`}
+          className="w-6 h-6 text-white drop-shadow-sm"
           viewBox="0 0 24 24"
           fill="none"
         >
           <path
-            className={animateCheck ? 'check-path' : ''}
             d="M5 13l4 4L19 7"
             stroke="currentColor"
             strokeWidth={2.5}
@@ -155,32 +151,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
             strokeLinejoin="round"
           />
         </svg>
-        {/* Today indicator - subtle underline */}
-        {isToday && (
-          <div className="w-5 h-[3px] rounded-full bg-white/80" />
-        )}
       </div>
-
-      {/* Multiple goals dots */}
-      {isCurrentMonth && !isFuture && activeGoals.length > 1 && (
-        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-0.5 z-10">
-          {activeGoals.map((goal) => {
-            const goalComplete = status.completedGoals.includes(goal.id);
-            return (
-              <div
-                key={goal.id}
-                className={`
-                  w-1 h-1 rounded-full
-                  ${goalComplete
-                    ? isComplete ? 'bg-white/70' : 'bg-emerald-500'
-                    : 'bg-gray-300 dark:bg-neutral-600'
-                  }
-                `}
-              />
-            );
-          })}
-        </div>
-      )}
     </button>
   );
 };
