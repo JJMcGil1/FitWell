@@ -1,12 +1,12 @@
 /**
- * Run Store
+ * Run Store (Cardio Store)
  *
- * Manages running data for the current user.
- * Handles CRUD operations, statistics, and filtering.
+ * Manages cardio session data for the current user.
+ * Handles CRUD operations, statistics, and filtering by cardio type.
  */
 
 import { create } from 'zustand';
-import type { Run, RunType } from '../../shared/types';
+import type { Run, CardioType } from '../../shared/types';
 
 interface RunState {
   // Data
@@ -16,7 +16,7 @@ interface RunState {
   // View state
   isLoading: boolean;
   error: string | null;
-  filterType: RunType | 'all';
+  filterCardioType: CardioType | 'all';
 
   // Actions
   fetchRuns: (userId: string, startDate?: string, endDate?: string) => Promise<void>;
@@ -24,7 +24,11 @@ interface RunState {
   updateRun: (id: string, updates: Partial<Omit<Run, 'id' | 'createdAt' | 'updatedAt' | 'pace'>>) => Promise<void>;
   deleteRun: (id: string) => Promise<void>;
   setSelectedRun: (run: Run | null) => void;
-  setFilterType: (type: RunType | 'all') => void;
+  setFilterCardioType: (type: CardioType | 'all') => void;
+
+  // Legacy compatibility
+  filterType: string;
+  setFilterType: (type: string) => void;
 
   // Computed
   getFilteredRuns: () => Run[];
@@ -39,14 +43,17 @@ interface RunStats {
   totalRuns: number;
   totalDistance: number;
   totalDuration: number;
+  totalCalories: number;
   averagePace: number;
   thisWeekRuns: number;
   thisWeekDistance: number;
+  thisWeekDuration: number;
   thisMonthRuns: number;
   thisMonthDistance: number;
+  thisMonthDuration: number;
+  thisMonthCalories: number;
   longestRun: number;
   fastestPace: number;
-  byType: Record<RunType, number>;
 }
 
 const initialState = {
@@ -54,7 +61,8 @@ const initialState = {
   selectedRun: null,
   isLoading: false,
   error: null,
-  filterType: 'all' as RunType | 'all',
+  filterCardioType: 'all' as CardioType | 'all',
+  filterType: 'all',
 };
 
 export const useRunStore = create<RunState>((set, get) => ({
@@ -114,14 +122,19 @@ export const useRunStore = create<RunState>((set, get) => ({
     set({ selectedRun: run });
   },
 
+  setFilterCardioType: (type) => {
+    set({ filterCardioType: type });
+  },
+
+  // Legacy compatibility
   setFilterType: (type) => {
     set({ filterType: type });
   },
 
   getFilteredRuns: () => {
-    const { runs, filterType } = get();
-    if (filterType === 'all') return runs;
-    return runs.filter((r) => r.type === filterType);
+    const { runs, filterCardioType } = get();
+    if (filterCardioType === 'all') return runs;
+    return runs.filter((r) => (r.cardioType || 'running') === filterCardioType);
   },
 
   getRunsByDate: (date: string) => {
@@ -142,6 +155,7 @@ export const useRunStore = create<RunState>((set, get) => ({
 
     const totalDistance = runs.reduce((sum, r) => sum + r.distance, 0);
     const totalDuration = runs.reduce((sum, r) => sum + r.duration, 0);
+    const totalCalories = runs.reduce((sum, r) => sum + (r.calories || 0), 0);
 
     const runsWithPace = runs.filter((r) => r.pace && r.pace > 0);
     const averagePace = runsWithPace.length > 0
@@ -156,31 +170,21 @@ export const useRunStore = create<RunState>((set, get) => ({
       ? Math.max(...runs.map((r) => r.distance))
       : 0;
 
-    const byType: Record<RunType, number> = {
-      easy: 0,
-      tempo: 0,
-      interval: 0,
-      long: 0,
-      recovery: 0,
-      race: 0,
-    };
-
-    for (const run of runs) {
-      byType[run.type]++;
-    }
-
     return {
       totalRuns: runs.length,
       totalDistance,
       totalDuration,
+      totalCalories,
       averagePace,
       thisWeekRuns: thisWeekRuns.length,
       thisWeekDistance: thisWeekRuns.reduce((sum, r) => sum + r.distance, 0),
+      thisWeekDuration: thisWeekRuns.reduce((sum, r) => sum + r.duration, 0),
       thisMonthRuns: thisMonthRuns.length,
       thisMonthDistance: thisMonthRuns.reduce((sum, r) => sum + r.distance, 0),
+      thisMonthDuration: thisMonthRuns.reduce((sum, r) => sum + r.duration, 0),
+      thisMonthCalories: thisMonthRuns.reduce((sum, r) => sum + (r.calories || 0), 0),
       longestRun,
       fastestPace,
-      byType,
     };
   },
 
@@ -189,7 +193,7 @@ export const useRunStore = create<RunState>((set, get) => ({
   },
 }));
 
-// Utility function to format pace (minutes per mile) to mm:ss string
+// Utility function to format pace (minutes per unit) to mm:ss string
 export const formatPace = (pace: number | undefined): string => {
   if (!pace || pace <= 0) return '--:--';
   const minutes = Math.floor(pace);
@@ -207,4 +211,14 @@ export const formatDuration = (minutes: number): string => {
     return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
   return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+// Utility to format total duration as "Xh Ym"
+export const formatTotalDuration = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const mins = Math.round(minutes % 60);
+  if (hours > 0) {
+    return `${hours}h ${mins}m`;
+  }
+  return `${mins}m`;
 };

@@ -98,6 +98,9 @@ const api: IpcApi = {
   getSchedule: (userId) => ipcRenderer.invoke('schedule:get', userId),
   setScheduleEntry: (userId, dayOfWeek, templateId) =>
     ipcRenderer.invoke('schedule:set', userId, dayOfWeek, templateId),
+  addScheduleEntry: (userId, dayOfWeek, templateId) =>
+    ipcRenderer.invoke('schedule:add', userId, dayOfWeek, templateId),
+  removeScheduleEntry: (id) => ipcRenderer.invoke('schedule:remove', id),
   clearSchedule: (userId) => ipcRenderer.invoke('schedule:clear', userId),
 
   // Run operations

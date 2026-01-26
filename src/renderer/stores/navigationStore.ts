@@ -7,7 +7,7 @@
 
 import { create } from 'zustand';
 
-export type Page = 'dashboard' | 'calendar' | 'workouts' | 'running' | 'weight' | 'goals' | 'achievements' | 'settings';
+export type Page = 'dashboard' | 'calendar' | 'workouts' | 'running' | 'weight' | 'volume' | 'goals' | 'achievements' | 'settings';
 
 interface NavigationState {
   currentPage: Page;

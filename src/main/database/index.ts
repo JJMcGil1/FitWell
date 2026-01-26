@@ -69,6 +69,42 @@ export function initDatabase(): Database.Database {
     db.exec('ALTER TABLE users ADD COLUMN profile_photo TEXT');
   }
 
+  // Run migrations for runs table (add cardio_type and distance_unit columns)
+  const runColumns = db.prepare("PRAGMA table_info(runs)").all() as Array<{ name: string }>;
+  const runColumnNames = runColumns.map(c => c.name);
+
+  if (!runColumnNames.includes('cardio_type')) {
+    console.log('[Database] Migrating: Adding cardio_type column to runs...');
+    db.exec("ALTER TABLE runs ADD COLUMN cardio_type TEXT DEFAULT 'running'");
+  }
+  if (!runColumnNames.includes('distance_unit')) {
+    console.log('[Database] Migrating: Adding distance_unit column to runs...');
+    db.exec("ALTER TABLE runs ADD COLUMN distance_unit TEXT DEFAULT 'miles'");
+  }
+
+  // Migration: Remove UNIQUE constraint from weekly_schedule to allow multiple workouts per day
+  // SQLite can't ALTER TABLE to drop constraints, so we recreate the table
+  const scheduleIndexes = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='weekly_schedule'").get() as { sql: string } | undefined;
+  if (scheduleIndexes && scheduleIndexes.sql && scheduleIndexes.sql.includes('UNIQUE')) {
+    console.log('[Database] Migrating: Removing UNIQUE constraint from weekly_schedule...');
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS weekly_schedule_new (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        day_of_week INTEGER NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
+        template_id TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (template_id) REFERENCES workout_templates(id) ON DELETE CASCADE
+      );
+      INSERT INTO weekly_schedule_new SELECT * FROM weekly_schedule;
+      DROP TABLE weekly_schedule;
+      ALTER TABLE weekly_schedule_new RENAME TO weekly_schedule;
+      CREATE INDEX IF NOT EXISTS idx_weekly_schedule_user ON weekly_schedule(user_id);
+    `);
+    console.log('[Database] Migration complete: weekly_schedule now supports multiple workouts per day');
+  }
+
   // Check if we need to seed
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
   if (userCount.count === 0) {
@@ -976,6 +1012,34 @@ export function setScheduleEntry(
   };
 }
 
+export function addScheduleEntry(
+  userId: string,
+  dayOfWeek: number,
+  templateId: string
+): ScheduleEntry {
+  const id = `schedule_${uuidv4()}`;
+  const now = new Date().toISOString();
+
+  getDatabase()
+    .prepare(
+      `INSERT INTO weekly_schedule (id, user_id, day_of_week, template_id, created_at)
+       VALUES (?, ?, ?, ?, ?)`
+    )
+    .run(id, userId, dayOfWeek, templateId, now);
+
+  return {
+    id,
+    userId,
+    dayOfWeek: dayOfWeek as ScheduleEntry['dayOfWeek'],
+    templateId,
+    createdAt: now,
+  };
+}
+
+export function removeScheduleEntry(id: string): void {
+  getDatabase().prepare('DELETE FROM weekly_schedule WHERE id = ?').run(id);
+}
+
 export function clearSchedule(userId: string): void {
   getDatabase().prepare('DELETE FROM weekly_schedule WHERE user_id = ?').run(userId);
 }
@@ -1007,8 +1071,10 @@ export function getRuns(
     id: string;
     user_id: string;
     date: string;
+    cardio_type: string | null;
     type: string;
     distance: number;
+    distance_unit: string | null;
     duration: number;
     pace: number | null;
     calories: number | null;
@@ -1025,8 +1091,10 @@ export function getRuns(
     id: row.id,
     userId: row.user_id,
     date: row.date,
+    cardioType: (row.cardio_type as Run['cardioType']) ?? 'running',
     type: row.type as Run['type'],
     distance: row.distance,
+    distanceUnit: (row.distance_unit as Run['distanceUnit']) ?? 'miles',
     duration: row.duration,
     pace: row.pace ?? undefined,
     calories: row.calories ?? undefined,
@@ -1047,8 +1115,10 @@ export function getRun(id: string): Run | null {
     id: string;
     user_id: string;
     date: string;
+    cardio_type: string | null;
     type: string;
     distance: number;
+    distance_unit: string | null;
     duration: number;
     pace: number | null;
     calories: number | null;
@@ -1067,8 +1137,10 @@ export function getRun(id: string): Run | null {
     id: row.id,
     userId: row.user_id,
     date: row.date,
+    cardioType: (row.cardio_type as Run['cardioType']) ?? 'running',
     type: row.type as Run['type'],
     distance: row.distance,
+    distanceUnit: (row.distance_unit as Run['distanceUnit']) ?? 'miles',
     duration: row.duration,
     pace: row.pace ?? undefined,
     calories: row.calories ?? undefined,
@@ -1087,20 +1159,22 @@ export function createRun(
 ): Run {
   const id = `run_${uuidv4()}`;
   const now = new Date().toISOString();
-  // Calculate pace: minutes per mile
+  // Calculate pace: minutes per distance unit
   const pace = run.distance > 0 ? run.duration / run.distance : null;
 
   getDatabase()
     .prepare(
-      `INSERT INTO runs (id, user_id, date, type, distance, duration, pace, calories, heart_rate_avg, heart_rate_max, elevation, route, notes, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO runs (id, user_id, date, cardio_type, type, distance, distance_unit, duration, pace, calories, heart_rate_avg, heart_rate_max, elevation, route, notes, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       id,
       run.userId,
       run.date,
+      run.cardioType ?? 'running',
       run.type,
       run.distance,
+      run.distanceUnit ?? 'miles',
       run.duration,
       pace,
       run.calories ?? null,
@@ -1116,6 +1190,8 @@ export function createRun(
   return {
     ...run,
     id,
+    cardioType: run.cardioType ?? 'running',
+    distanceUnit: run.distanceUnit ?? 'miles',
     pace: pace ?? undefined,
     createdAt: now,
     updatedAt: now,
@@ -1134,6 +1210,10 @@ export function updateRun(
     setClauses.push('date = ?');
     values.push(updates.date);
   }
+  if (updates.cardioType !== undefined) {
+    setClauses.push('cardio_type = ?');
+    values.push(updates.cardioType);
+  }
   if (updates.type !== undefined) {
     setClauses.push('type = ?');
     values.push(updates.type);
@@ -1141,6 +1221,10 @@ export function updateRun(
   if (updates.distance !== undefined) {
     setClauses.push('distance = ?');
     values.push(updates.distance);
+  }
+  if (updates.distanceUnit !== undefined) {
+    setClauses.push('distance_unit = ?');
+    values.push(updates.distanceUnit);
   }
   if (updates.duration !== undefined) {
     setClauses.push('duration = ?');

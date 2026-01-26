@@ -1,39 +1,80 @@
 /**
- * RunningPage
+ * RunningPage (Cardio Page)
  *
- * Track runs, distance, pace, and running goals.
- * Features run logging, pace calculation, and statistics.
+ * Track cardio sessions: running, cycling, stairmaster, swimming, etc.
+ * Features session logging, pace calculation, and statistics.
  */
 
 import React, { useState, useEffect } from 'react';
 import { useUserStore } from '../stores/userStore';
-import { useRunStore, formatPace, formatDuration } from '../stores/runStore';
-import type { Run, RunType } from '../../shared/types';
+import { useRunStore, formatPace, formatDuration, formatTotalDuration } from '../stores/runStore';
+import type { Run, SessionIntensity, CardioType, DistanceUnit } from '../../shared/types';
 import { format, subDays, isToday, isYesterday, parseISO } from 'date-fns';
-import { HiOutlinePlus, HiOutlineXMark, HiOutlinePencilSquare, HiOutlineTrash } from 'react-icons/hi2';
-import { PiCompassRoseBold } from 'react-icons/pi';
+import { HiOutlinePlus, HiOutlineXMark, HiOutlinePencilSquare, HiOutlineTrash, HiOutlineClock, HiOutlineFire, HiOutlineArrowTrendingUp } from 'react-icons/hi2';
+import { CardMenu } from '../components/CardMenu';
+import { FaPersonRunning, FaPersonWalking, FaPersonSwimming } from 'react-icons/fa6';
+import { TbStairs } from 'react-icons/tb';
+import { MdOutlineDirectionsBike, MdOutlineFitnessCenter } from 'react-icons/md';
+import { GiJumpingRope } from 'react-icons/gi';
+import { LuWaves, LuGauge } from 'react-icons/lu';
+import { PiCompassRoseBold, PiMapPinLineBold } from 'react-icons/pi';
+import { BsThreeDots } from 'react-icons/bs';
+import { Dropdown } from '../components/Dropdown';
+import type { DropdownOption } from '../components/Dropdown';
 
-// Run type configurations
-const RUN_TYPES: { type: RunType; label: string; description: string; color: string }[] = [
-  { type: 'easy', label: 'Easy', description: 'Relaxed, conversational pace', color: 'bg-green-500' },
-  { type: 'tempo', label: 'Tempo', description: 'Comfortably hard effort', color: 'bg-orange-500' },
-  { type: 'interval', label: 'Interval', description: 'Speed work with recovery', color: 'bg-red-500' },
-  { type: 'long', label: 'Long', description: 'Extended distance run', color: 'bg-blue-500' },
-  { type: 'recovery', label: 'Recovery', description: 'Very easy, active recovery', color: 'bg-purple-500' },
-  { type: 'race', label: 'Race', description: 'Competition or time trial', color: 'bg-yellow-500' },
+// Cardio activity types
+const CARDIO_TYPES: { type: CardioType; label: string; icon: React.ReactNode }[] = [
+  { type: 'running', label: 'Run', icon: <FaPersonRunning className="w-4 h-4" /> },
+  { type: 'walking', label: 'Walk', icon: <FaPersonWalking className="w-4 h-4" /> },
+  { type: 'cycling', label: 'Cycle', icon: <MdOutlineDirectionsBike className="w-4 h-4" /> },
+  { type: 'stairmaster', label: 'Stairs', icon: <TbStairs className="w-4 h-4" /> },
+  { type: 'elliptical', label: 'Elliptical', icon: <MdOutlineFitnessCenter className="w-4 h-4" /> },
+  { type: 'rowing', label: 'Row', icon: <LuWaves className="w-4 h-4" /> },
+  { type: 'swimming', label: 'Swim', icon: <FaPersonSwimming className="w-4 h-4" /> },
+  { type: 'hiit', label: 'HIIT', icon: <MdOutlineFitnessCenter className="w-4 h-4" /> },
+  { type: 'jump_rope', label: 'Rope', icon: <GiJumpingRope className="w-4 h-4" /> },
+  { type: 'other', label: 'Other', icon: <BsThreeDots className="w-4 h-4" /> },
+];
+
+// Distance unit options
+const DISTANCE_UNITS: { unit: DistanceUnit; label: string; shortLabel: string }[] = [
+  { unit: 'miles', label: 'Miles', shortLabel: 'mi' },
+  { unit: 'km', label: 'Kilometers', shortLabel: 'km' },
+  { unit: 'meters', label: 'Meters', shortLabel: 'm' },
+  { unit: 'yards', label: 'Yards', shortLabel: 'yd' },
+  { unit: 'laps', label: 'Laps', shortLabel: 'laps' },
+  { unit: 'floors', label: 'Floors', shortLabel: 'floors' },
+  { unit: 'steps', label: 'Steps', shortLabel: 'steps' },
+];
+
+// Dropdown options for distance units
+const DISTANCE_UNIT_OPTIONS: DropdownOption<DistanceUnit>[] = DISTANCE_UNITS.map((u) => ({
+  value: u.unit,
+  label: u.label,
+}));
+
+// Filter tabs: subset of cardio types shown as quick filters
+const FILTER_TABS: { type: CardioType | 'all'; label: string }[] = [
+  { type: 'all', label: 'All' },
+  { type: 'running', label: 'Run' },
+  { type: 'walking', label: 'Walk' },
+  { type: 'cycling', label: 'Cycle' },
+  { type: 'stairmaster', label: 'Stairs' },
+  { type: 'swimming', label: 'Swim' },
+  { type: 'rowing', label: 'Row' },
+  { type: 'hiit', label: 'HIIT' },
 ];
 
 export const RunningPage: React.FC = () => {
   const { currentUser } = useUserStore();
   const {
-    runs,
     isLoading,
     fetchRuns,
     createRun,
     deleteRun,
     getRunStats,
-    filterType,
-    setFilterType,
+    filterCardioType,
+    setFilterCardioType,
     getFilteredRuns,
   } = useRunStore();
 
@@ -42,20 +83,20 @@ export const RunningPage: React.FC = () => {
   const [editingRun, setEditingRun] = useState<Run | null>(null);
 
   // Form state
-  const [runType, setRunType] = useState<RunType>('easy');
-  const [runDate, setRunDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [runDistance, setRunDistance] = useState<number | ''>('');
-  const [runDurationMins, setRunDurationMins] = useState<number | ''>('');
-  const [runDurationSecs, setRunDurationSecs] = useState<number | ''>(0);
-  const [runRoute, setRunRoute] = useState('');
-  const [runNotes, setRunNotes] = useState('');
-  const [runCalories, setRunCalories] = useState<number | ''>('');
-  const [runElevation, setRunElevation] = useState<number | ''>('');
+  const [cardioType, setCardioType] = useState<CardioType>('running');
+  const [sessionType, setSessionType] = useState<SessionIntensity>('easy');
+  const [sessionDate, setSessionDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [sessionDistance, setSessionDistance] = useState<number | ''>('');
+  const [sessionDistanceUnit, setSessionDistanceUnit] = useState<DistanceUnit>('miles');
+  const [sessionDurationMins, setSessionDurationMins] = useState<number | ''>('');
+  const [sessionDurationSecs, setSessionDurationSecs] = useState<number | ''>(0);
+  const [sessionNotes, setSessionNotes] = useState('');
+  const [sessionCalories, setSessionCalories] = useState<number | ''>('');
+  const [sessionElevation, setSessionElevation] = useState<number | ''>('');
 
   // Fetch runs on mount
   useEffect(() => {
     if (currentUser) {
-      // Fetch last 365 days of runs for good statistics
       const endDate = format(new Date(), 'yyyy-MM-dd');
       const startDate = format(subDays(new Date(), 365), 'yyyy-MM-dd');
       fetchRuns(currentUser.id, startDate, endDate);
@@ -66,31 +107,33 @@ export const RunningPage: React.FC = () => {
   const filteredRuns = getFilteredRuns();
 
   const resetForm = () => {
-    setRunType('easy');
-    setRunDate(format(new Date(), 'yyyy-MM-dd'));
-    setRunDistance('');
-    setRunDurationMins('');
-    setRunDurationSecs(0);
-    setRunRoute('');
-    setRunNotes('');
-    setRunCalories('');
-    setRunElevation('');
+    setCardioType('running');
+    setSessionType('easy');
+    setSessionDate(format(new Date(), 'yyyy-MM-dd'));
+    setSessionDistance('');
+    setSessionDistanceUnit('miles');
+    setSessionDurationMins('');
+    setSessionDurationSecs(0);
+    setSessionNotes('');
+    setSessionCalories('');
+    setSessionElevation('');
     setEditingRun(null);
   };
 
   const openModal = (run?: Run) => {
     if (run) {
       setEditingRun(run);
-      setRunType(run.type);
-      setRunDate(run.date);
-      setRunDistance(run.distance);
+      setCardioType(run.cardioType || 'running');
+      setSessionType(run.type);
+      setSessionDate(run.date);
+      setSessionDistance(run.distance);
+      setSessionDistanceUnit(run.distanceUnit || 'miles');
       const totalMins = run.duration;
-      setRunDurationMins(Math.floor(totalMins));
-      setRunDurationSecs(Math.round((totalMins - Math.floor(totalMins)) * 60));
-      setRunRoute(run.route || '');
-      setRunNotes(run.notes || '');
-      setRunCalories(run.calories || '');
-      setRunElevation(run.elevation || '');
+      setSessionDurationMins(Math.floor(totalMins));
+      setSessionDurationSecs(Math.round((totalMins - Math.floor(totalMins)) * 60));
+      setSessionNotes(run.notes || '');
+      setSessionCalories(run.calories || '');
+      setSessionElevation(run.elevation || '');
     } else {
       resetForm();
     }
@@ -102,63 +145,77 @@ export const RunningPage: React.FC = () => {
     resetForm();
   };
 
-  const handleSaveRun = async () => {
-    if (!currentUser || !runDistance || !runDurationMins) return;
+  const handleSaveSession = async () => {
+    if (!currentUser || !sessionDurationMins) return;
 
-    const duration = Number(runDurationMins) + Number(runDurationSecs || 0) / 60;
+    const duration = Number(sessionDurationMins) + Number(sessionDurationSecs || 0) / 60;
 
-    const runData = {
+    // Auto-generate route name: "M/D/YY - Activity"
+    const dateObj = parseISO(sessionDate);
+    const cardioLabel = CARDIO_TYPES.find((t) => t.type === cardioType)?.label || 'Cardio';
+    const autoRoute = `${format(dateObj, 'M/d/yy')} - ${cardioLabel}`;
+
+    const sessionData = {
       userId: currentUser.id,
-      date: runDate,
-      type: runType,
-      distance: Number(runDistance),
+      date: sessionDate,
+      cardioType,
+      type: sessionType,
+      distance: Number(sessionDistance) || 0,
+      distanceUnit: sessionDistanceUnit,
       duration,
-      route: runRoute.trim() || undefined,
-      notes: runNotes.trim() || undefined,
-      calories: runCalories ? Number(runCalories) : undefined,
-      elevation: runElevation ? Number(runElevation) : undefined,
+      route: autoRoute,
+      notes: sessionNotes.trim() || undefined,
+      calories: sessionCalories ? Number(sessionCalories) : undefined,
+      elevation: sessionElevation ? Number(sessionElevation) : undefined,
     };
 
     if (editingRun) {
-      await useRunStore.getState().updateRun(editingRun.id, runData);
+      await useRunStore.getState().updateRun(editingRun.id, sessionData);
     } else {
-      await createRun(runData);
+      await createRun(sessionData);
     }
 
     closeModal();
   };
 
-  const handleDeleteRun = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this run?')) {
+  const handleDeleteSession = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this session?')) {
       await deleteRun(id);
     }
   };
 
-  const formatRunDate = (dateStr: string) => {
+  const formatSessionDate = (dateStr: string) => {
     const date = parseISO(dateStr);
     if (isToday(date)) return 'Today';
     if (isYesterday(date)) return 'Yesterday';
     return format(date, 'MMM d, yyyy');
   };
 
-  const getRunTypeConfig = (type: RunType) => {
-    return RUN_TYPES.find((t) => t.type === type) || RUN_TYPES[0];
+  const getCardioTypeConfig = (type: CardioType) => {
+    return CARDIO_TYPES.find((t) => t.type === type) || CARDIO_TYPES[0];
   };
 
-  // Group runs by date
-  const groupedRuns = filteredRuns.reduce((acc, run) => {
+  const getDistanceUnitConfig = (unit: DistanceUnit) => {
+    return DISTANCE_UNITS.find((u) => u.unit === unit) || DISTANCE_UNITS[0];
+  };
+
+  // Group sessions by date
+  const groupedSessions = filteredRuns.reduce((acc, run) => {
     const date = run.date;
     if (!acc[date]) acc[date] = [];
     acc[date].push(run);
     return acc;
   }, {} as Record<string, Run[]>);
 
-  const sortedDates = Object.keys(groupedRuns).sort((a, b) => b.localeCompare(a));
+  const sortedDates = Object.keys(groupedSessions).sort((a, b) => b.localeCompare(a));
 
-  // Calculate live pace preview
-  const livePace = runDistance && runDurationMins
-    ? (Number(runDurationMins) + Number(runDurationSecs || 0) / 60) / Number(runDistance)
+  // Calculate live pace preview (for distance-based activities)
+  const livePace = sessionDistance && sessionDurationMins
+    ? (Number(sessionDurationMins) + Number(sessionDurationSecs || 0) / 60) / Number(sessionDistance)
     : null;
+
+  // Check if current cardio type supports distance
+  const supportsDistance = ['running', 'walking', 'cycling', 'swimming', 'rowing', 'stairmaster', 'elliptical'].includes(cardioType);
 
   return (
     <div className="h-full p-6 pb-8 flex flex-col overflow-hidden">
@@ -166,73 +223,64 @@ export const RunningPage: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
-            Running
+            Cardio
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            {stats.thisWeekDistance.toFixed(1)} mi this week
+            Track and manage your cardio sessions
           </p>
         </div>
         <button
           onClick={() => openModal()}
-          className="px-4 py-2 text-sm font-medium text-white bg-gray-900 dark:bg-gray-100 dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors flex items-center gap-2"
+          className="btn-primary"
         >
           <HiOutlinePlus className="w-4 h-4" />
-          Log Run
+          Log Session
         </button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 border border-gray-200 dark:border-neutral-700">
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">This Week</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.thisWeekDistance.toFixed(1)}</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">miles</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.thisWeekRuns}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            {stats.thisWeekRuns === 1 ? 'session' : 'sessions'}{stats.thisWeekDuration > 0 ? ` · ${formatTotalDuration(stats.thisWeekDuration)}` : ''}
+          </p>
         </div>
         <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 border border-gray-200 dark:border-neutral-700">
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">This Month</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.thisMonthDistance.toFixed(1)}</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">miles</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatTotalDuration(stats.thisMonthDuration)}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            {stats.thisMonthRuns} {stats.thisMonthRuns === 1 ? 'session' : 'sessions'}{stats.thisMonthCalories > 0 ? ` · ${stats.thisMonthCalories.toLocaleString()} cal` : ''}
+          </p>
         </div>
         <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 border border-gray-200 dark:border-neutral-700">
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Avg Pace</p>
-          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formatPace(stats.averagePace)}</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">/mile</p>
-        </div>
-        <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 border border-gray-200 dark:border-neutral-700">
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Longest Run</p>
-          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.longestRun.toFixed(1)}</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">miles</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">All Time</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalRuns}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            {stats.totalRuns === 1 ? 'session' : 'sessions'}{stats.totalDuration > 0 ? ` · ${formatTotalDuration(stats.totalDuration)}` : ''}
+          </p>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 mb-4 flex-wrap">
-        <button
-          onClick={() => setFilterType('all')}
-          className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-            filterType === 'all'
-              ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-neutral-700 dark:text-gray-300 dark:hover:bg-neutral-600'
-          }`}
-        >
-          All
-        </button>
-        {RUN_TYPES.map((type) => (
+      {/* Filter Tabs — by Cardio Type */}
+      <div className="flex gap-1.5 mb-5">
+        {FILTER_TABS.map((tab) => (
           <button
-            key={type.type}
-            onClick={() => setFilterType(type.type)}
-            className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-              filterType === type.type
+            key={tab.type}
+            onClick={() => setFilterCardioType(tab.type)}
+            className={`px-3 py-1.5 text-[13px] font-medium rounded-lg transition-colors ${
+              filterCardioType === tab.type
                 ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-neutral-700 dark:text-gray-300 dark:hover:bg-neutral-600'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-neutral-700'
             }`}
           >
-            {type.label}
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Run History */}
+      {/* Session History */}
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-48">
@@ -245,16 +293,16 @@ export const RunningPage: React.FC = () => {
                 <PiCompassRoseBold className="w-8 h-8 text-gray-400 dark:text-gray-500" />
               </div>
               <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                No runs logged
+                No sessions logged
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                Track your runs, monitor your pace, and watch your distance grow over time.
+                Track your cardio sessions, monitor your progress, and watch your fitness grow over time.
               </p>
               <button
                 onClick={() => openModal()}
-                className="px-4 py-2 text-sm font-medium text-white bg-gray-900 dark:bg-gray-100 dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+                className="btn-primary"
               >
-                Log Your First Run
+                Log Your First Session
               </button>
             </div>
           </div>
@@ -262,89 +310,103 @@ export const RunningPage: React.FC = () => {
           <div className="space-y-6">
             {sortedDates.map((date) => (
               <div key={date}>
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
-                  {formatRunDate(date)}
+                <h3 className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2.5">
+                  {formatSessionDate(date)}
                 </h3>
-                <div className="space-y-3">
-                  {groupedRuns[date].map((run) => {
-                    const typeConfig = getRunTypeConfig(run.type);
+                <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
+                  {groupedSessions[date].map((session) => {
+                    const cardioConfig = getCardioTypeConfig(session.cardioType || 'running');
+                    const unitConfig = getDistanceUnitConfig(session.distanceUnit || 'miles');
+                    const sessionDateObj = parseISO(session.date);
+                    const dateLabel = format(sessionDateObj, 'MMM d, yyyy');
+
                     return (
                       <div
-                        key={run.id}
-                        className="bg-white dark:bg-neutral-800 rounded-xl p-4 border border-gray-200 dark:border-neutral-700 hover:border-gray-300 dark:hover:border-neutral-600 transition-colors"
+                        key={session.id}
+                        className="group bg-white dark:bg-neutral-800 rounded-xl border border-gray-200 dark:border-neutral-700 hover:border-gray-300 dark:hover:border-neutral-600 transition-all duration-150 hover:shadow-soft overflow-hidden"
                       >
-                        <div className="flex items-start gap-4">
-                          {/* Type indicator */}
-                          <div className={`w-10 h-10 rounded-lg ${typeConfig.color} bg-opacity-10 dark:bg-opacity-20 flex items-center justify-center`}>
-                            <PiCompassRoseBold className={`w-5 h-5 ${typeConfig.color.replace('bg-', 'text-').replace('500', '600')} dark:${typeConfig.color.replace('bg-', 'text-').replace('500', '400')}`} />
+                        <div className="p-4">
+                          {/* Header: icon + name + date + menu */}
+                          <div className="flex items-start gap-3">
+                            {/* Activity icon */}
+                            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-neutral-700 flex items-center justify-center text-gray-500 dark:text-gray-400 flex-shrink-0">
+                              {cardioConfig.icon}
+                            </div>
+
+                            {/* Name (route includes date, e.g. "1/23/26 - Run") */}
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate text-[15px]">
+                                {session.route || `${format(sessionDateObj, 'M/d/yy')} - ${cardioConfig.label}`}
+                              </h3>
+                            </div>
+
+                            {/* Three-dot menu — visible on hover */}
+                            <CardMenu
+                              items={[
+                                {
+                                  label: 'Edit',
+                                  icon: <HiOutlinePencilSquare className="w-4 h-4" />,
+                                  onClick: () => openModal(session),
+                                },
+                                {
+                                  label: 'Delete',
+                                  icon: <HiOutlineTrash className="w-4 h-4" />,
+                                  onClick: () => handleDeleteSession(session.id),
+                                  variant: 'danger',
+                                },
+                              ]}
+                            />
                           </div>
 
-                          {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-neutral-700 text-gray-600 dark:text-gray-300 capitalize">
-                                {run.type}
-                              </span>
-                              {run.route && (
-                                <span className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                                  {run.route}
+                          {/* Stats grid with icons */}
+                          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-neutral-700/50 grid grid-cols-2 gap-2">
+                            {/* Distance */}
+                            {session.distance > 0 && (
+                              <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                                <PiMapPinLineBold className="w-3.5 h-3.5 flex-shrink-0" />
+                                <span className="text-xs font-medium">
+                                  {session.distance % 1 === 0 ? session.distance : session.distance.toFixed(2)} {unitConfig.shortLabel}
                                 </span>
-                              )}
-                            </div>
-
-                            {/* Stats row */}
-                            <div className="flex items-center gap-6 mt-2">
-                              <div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                  {run.distance.toFixed(2)}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">miles</p>
                               </div>
-                              <div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                  {formatDuration(run.duration)}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">time</p>
-                              </div>
-                              <div>
-                                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                                  {formatPace(run.pace)}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">pace</p>
-                              </div>
-                              {run.elevation && (
-                                <div>
-                                  <p className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-                                    {run.elevation}
-                                  </p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">ft elev</p>
-                                </div>
-                              )}
-                            </div>
-
-                            {run.notes && (
-                              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
-                                {run.notes}
-                              </p>
                             )}
-                          </div>
 
-                          {/* Actions */}
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => openModal(run)}
-                              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
-                              title="Edit run"
-                            >
-                              <HiOutlinePencilSquare className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteRun(run.id)}
-                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                              title="Delete run"
-                            >
-                              <HiOutlineTrash className="w-4 h-4" />
-                            </button>
+                            {/* Duration */}
+                            <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                              <HiOutlineClock className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span className="text-xs font-medium">
+                                {formatDuration(session.duration)}
+                              </span>
+                            </div>
+
+                            {/* Pace */}
+                            {session.distance > 0 && session.pace && (
+                              <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                                <LuGauge className="w-3.5 h-3.5 flex-shrink-0" />
+                                <span className="text-xs font-medium">
+                                  {formatPace(session.pace)}/{unitConfig.shortLabel}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Calories */}
+                            {session.calories && (
+                              <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                                <HiOutlineFire className="w-3.5 h-3.5 flex-shrink-0" />
+                                <span className="text-xs font-medium">
+                                  {session.calories} cal
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Elevation */}
+                            {session.elevation && (
+                              <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                                <HiOutlineArrowTrendingUp className="w-3.5 h-3.5 flex-shrink-0" />
+                                <span className="text-xs font-medium">
+                                  {session.elevation} ft
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -357,7 +419,7 @@ export const RunningPage: React.FC = () => {
         )}
       </div>
 
-      {/* Log Run Modal */}
+      {/* Log Cardio Session Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
@@ -371,7 +433,7 @@ export const RunningPage: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-neutral-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {editingRun ? 'Edit Run' : 'Log Run'}
+                {editingRun ? 'Edit Session' : 'Log Session'}
               </h2>
               <button
                 onClick={closeModal}
@@ -383,29 +445,27 @@ export const RunningPage: React.FC = () => {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-5">
-              {/* Run Type */}
+              {/* Activity Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Run Type
+                  Activity Type
                 </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {RUN_TYPES.map((type) => (
+                <div className="grid grid-cols-5 gap-2">
+                  {CARDIO_TYPES.map((type) => (
                     <button
                       key={type.type}
-                      onClick={() => setRunType(type.type)}
-                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-all text-center ${
-                        runType === type.type
-                          ? 'border-gray-900 bg-gray-900 text-white dark:border-gray-100 dark:bg-gray-100 dark:text-gray-900'
+                      onClick={() => setCardioType(type.type)}
+                      className={`flex flex-col items-center gap-1 px-2 py-3 rounded-lg border text-xs font-medium transition-all ${
+                        cardioType === type.type
+                          ? 'border-brand-500 bg-brand-500 text-white'
                           : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-neutral-600 dark:bg-neutral-700 dark:text-gray-300 dark:hover:bg-neutral-600'
                       }`}
                     >
-                      {type.label}
+                      <span className="text-lg">{type.icon}</span>
+                      <span className="truncate w-full text-center">{type.label}</span>
                     </button>
                   ))}
                 </div>
-                <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  {getRunTypeConfig(runType).description}
-                </p>
               </div>
 
               {/* Date */}
@@ -415,26 +475,35 @@ export const RunningPage: React.FC = () => {
                 </label>
                 <input
                   type="date"
-                  value={runDate}
-                  onChange={(e) => setRunDate(e.target.value)}
+                  value={sessionDate}
+                  onChange={(e) => setSessionDate(e.target.value)}
                   className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
                 />
               </div>
 
-              {/* Distance */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Distance (miles)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={runDistance}
-                  onChange={(e) => setRunDistance(e.target.value ? parseFloat(e.target.value) : '')}
-                  placeholder="3.10"
-                  className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
-                />
-              </div>
+              {/* Distance - only show for distance-based activities */}
+              {supportsDistance && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Distance
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={sessionDistance}
+                      onChange={(e) => setSessionDistance(e.target.value ? parseFloat(e.target.value) : '')}
+                      placeholder="3.10"
+                      className="flex-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
+                    />
+                    <Dropdown<DistanceUnit>
+                      options={DISTANCE_UNIT_OPTIONS}
+                      value={sessionDistanceUnit}
+                      onChange={setSessionDistanceUnit}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Duration */}
               <div>
@@ -445,8 +514,8 @@ export const RunningPage: React.FC = () => {
                   <div className="flex-1">
                     <input
                       type="number"
-                      value={runDurationMins}
-                      onChange={(e) => setRunDurationMins(e.target.value ? parseInt(e.target.value) : '')}
+                      value={sessionDurationMins}
+                      onChange={(e) => setSessionDurationMins(e.target.value ? parseInt(e.target.value) : '')}
                       placeholder="25"
                       min="0"
                       className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
@@ -457,8 +526,8 @@ export const RunningPage: React.FC = () => {
                   <div className="w-24">
                     <input
                       type="number"
-                      value={runDurationSecs}
-                      onChange={(e) => setRunDurationSecs(e.target.value ? parseInt(e.target.value) : '')}
+                      value={sessionDurationSecs}
+                      onChange={(e) => setSessionDurationSecs(e.target.value ? parseInt(e.target.value) : '')}
                       placeholder="00"
                       min="0"
                       max="59"
@@ -469,29 +538,15 @@ export const RunningPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Live Pace Preview */}
-              {livePace && (
+              {/* Live Pace Preview - only for distance-based activities */}
+              {supportsDistance && livePace && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 flex items-center justify-between">
                   <span className="text-sm text-blue-700 dark:text-blue-300">Calculated Pace</span>
                   <span className="text-lg font-bold text-blue-700 dark:text-blue-300">
-                    {formatPace(livePace)} /mi
+                    {formatPace(livePace)} /{getDistanceUnitConfig(sessionDistanceUnit).shortLabel}
                   </span>
                 </div>
               )}
-
-              {/* Route */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Route Name (optional)
-                </label>
-                <input
-                  type="text"
-                  value={runRoute}
-                  onChange={(e) => setRunRoute(e.target.value)}
-                  placeholder="e.g., Neighborhood loop, Park trail"
-                  className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
-                />
-              </div>
 
               {/* Optional fields row */}
               <div className="grid grid-cols-2 gap-4">
@@ -501,8 +556,8 @@ export const RunningPage: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    value={runCalories}
-                    onChange={(e) => setRunCalories(e.target.value ? parseInt(e.target.value) : '')}
+                    value={sessionCalories}
+                    onChange={(e) => setSessionCalories(e.target.value ? parseInt(e.target.value) : '')}
                     placeholder="300"
                     className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
                   />
@@ -513,27 +568,14 @@ export const RunningPage: React.FC = () => {
                   </label>
                   <input
                     type="number"
-                    value={runElevation}
-                    onChange={(e) => setRunElevation(e.target.value ? parseInt(e.target.value) : '')}
+                    value={sessionElevation}
+                    onChange={(e) => setSessionElevation(e.target.value ? parseInt(e.target.value) : '')}
                     placeholder="150"
                     className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100"
                   />
                 </div>
               </div>
 
-              {/* Notes */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Notes (optional)
-                </label>
-                <textarea
-                  value={runNotes}
-                  onChange={(e) => setRunNotes(e.target.value)}
-                  placeholder="How did it feel? Weather conditions?"
-                  rows={3}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-100 resize-none"
-                />
-              </div>
             </div>
 
             {/* Footer */}
@@ -545,11 +587,11 @@ export const RunningPage: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={handleSaveRun}
-                disabled={!runDistance || !runDurationMins}
-                className="px-6 py-2 text-sm font-medium text-white bg-gray-900 dark:bg-gray-100 dark:text-gray-900 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleSaveSession}
+                disabled={!sessionDurationMins}
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {editingRun ? 'Save Changes' : 'Log Run'}
+                {editingRun ? 'Save Changes' : 'Log Session'}
               </button>
             </div>
           </div>

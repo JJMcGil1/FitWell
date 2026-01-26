@@ -182,6 +182,14 @@ export function registerIpcHandlers(): void {
     return db.setScheduleEntry(userId, dayOfWeek, templateId);
   });
 
+  ipcMain.handle('schedule:add', (_, userId: string, dayOfWeek: number, templateId: string) => {
+    return db.addScheduleEntry(userId, dayOfWeek, templateId);
+  });
+
+  ipcMain.handle('schedule:remove', (_, id: string) => {
+    db.removeScheduleEntry(id);
+  });
+
   ipcMain.handle('schedule:clear', (_, userId: string) => {
     db.clearSchedule(userId);
   });

@@ -6,6 +6,7 @@
 
 import React, { useState } from 'react';
 import { HiOutlineArrowPath, HiOutlineScale, HiOutlineClipboardDocument, HiOutlinePlus, HiOutlineCheckBadge, HiOutlineBolt, HiOutlinePencilSquare, HiOutlinePauseCircle, HiOutlineTrash, HiOutlinePlayCircle } from 'react-icons/hi2';
+import { CardMenu } from '../components/CardMenu';
 import { useGoalStore } from '../stores/goalStore';
 import { useUserStore } from '../stores/userStore';
 import type { Goal, GoalType } from '../../shared/types';
@@ -195,7 +196,7 @@ export const GoalsPage: React.FC = () => {
               return (
                 <div
                   key={goal.id}
-                  className="card p-4 flex items-center gap-4"
+                  className="group card p-4 flex items-center gap-4"
                 >
                   {/* Icon */}
                   <div className="w-10 h-10 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center text-brand-500 dark:text-brand-400">
@@ -221,29 +222,26 @@ export const GoalsPage: React.FC = () => {
                   )}
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleOpenEdit(goal)}
-                      className="p-2 text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors"
-                      title="Edit goal"
-                    >
-                      <HiOutlinePencilSquare className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleToggleActive(goal)}
-                      className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
-                      title="Pause goal"
-                    >
-                      <HiOutlinePauseCircle className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(goal.id)}
-                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                      title="Delete goal"
-                    >
-                      <HiOutlineTrash className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <CardMenu
+                    items={[
+                      {
+                        label: 'Edit',
+                        icon: <HiOutlinePencilSquare className="w-4 h-4" />,
+                        onClick: () => handleOpenEdit(goal),
+                      },
+                      {
+                        label: 'Pause',
+                        icon: <HiOutlinePauseCircle className="w-4 h-4" />,
+                        onClick: () => handleToggleActive(goal),
+                      },
+                      {
+                        label: 'Delete',
+                        icon: <HiOutlineTrash className="w-4 h-4" />,
+                        onClick: () => handleDelete(goal.id),
+                        variant: 'danger',
+                      },
+                    ]}
+                  />
                 </div>
               );
             })}
@@ -262,7 +260,7 @@ export const GoalsPage: React.FC = () => {
             {inactiveGoals.map((goal) => (
               <div
                 key={goal.id}
-                className="card p-4 flex items-center gap-4 opacity-60"
+                className="group card p-4 flex items-center gap-4 opacity-60"
               >
                 {/* Icon */}
                 <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-neutral-700 flex items-center justify-center text-gray-400 dark:text-gray-500">
@@ -280,29 +278,26 @@ export const GoalsPage: React.FC = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleOpenEdit(goal)}
-                    className="p-2 text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors"
-                    title="Edit goal"
-                  >
-                    <HiOutlinePencilSquare className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleToggleActive(goal)}
-                    className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
-                    title="Resume goal"
-                  >
-                    <HiOutlinePlayCircle className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(goal.id)}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                    title="Delete goal"
-                  >
-                    <HiOutlineTrash className="w-4 h-4" />
-                  </button>
-                </div>
+                <CardMenu
+                  items={[
+                    {
+                      label: 'Edit',
+                      icon: <HiOutlinePencilSquare className="w-4 h-4" />,
+                      onClick: () => handleOpenEdit(goal),
+                    },
+                    {
+                      label: 'Resume',
+                      icon: <HiOutlinePlayCircle className="w-4 h-4" />,
+                      onClick: () => handleToggleActive(goal),
+                    },
+                    {
+                      label: 'Delete',
+                      icon: <HiOutlineTrash className="w-4 h-4" />,
+                      onClick: () => handleDelete(goal.id),
+                      variant: 'danger',
+                    },
+                  ]}
+                />
               </div>
             ))}
           </div>

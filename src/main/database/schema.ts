@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS workout_templates (
 );
 
 -- Weekly schedule table
--- Maps days of the week to workout templates
+-- Maps days of the week to workout templates (supports multiple workouts per day)
 CREATE TABLE IF NOT EXISTS weekly_schedule (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
@@ -112,18 +112,19 @@ CREATE TABLE IF NOT EXISTS weekly_schedule (
   template_id TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (template_id) REFERENCES workout_templates(id) ON DELETE CASCADE,
-  UNIQUE (user_id, day_of_week)
+  FOREIGN KEY (template_id) REFERENCES workout_templates(id) ON DELETE CASCADE
 );
 
--- Runs table
--- Stores running activities with distance, duration, pace
+-- Runs table (Cardio sessions)
+-- Stores cardio activities with distance, duration, pace
 CREATE TABLE IF NOT EXISTS runs (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   date TEXT NOT NULL,
+  cardio_type TEXT DEFAULT 'running' CHECK (cardio_type IN ('running', 'walking', 'cycling', 'stairmaster', 'elliptical', 'rowing', 'swimming', 'hiit', 'jump_rope', 'other')),
   type TEXT NOT NULL CHECK (type IN ('easy', 'tempo', 'interval', 'long', 'recovery', 'race')),
   distance REAL NOT NULL,
+  distance_unit TEXT DEFAULT 'miles' CHECK (distance_unit IN ('miles', 'km', 'meters', 'yards', 'laps', 'floors', 'steps')),
   duration REAL NOT NULL,
   pace REAL,
   calories INTEGER,

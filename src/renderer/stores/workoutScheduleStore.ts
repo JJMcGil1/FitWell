@@ -3,7 +3,7 @@
  *
  * Manages workout templates and weekly schedule.
  * Templates are reusable workout routines.
- * Schedule maps days of the week to templates.
+ * Schedule maps days of the week to templates (supports multiple per day).
  */
 
 import { create } from 'zustand';
@@ -35,6 +35,12 @@ export const TEMPLATE_COLORS: string[] = [
   '#84cc16', // lime
 ];
 
+/** A resolved schedule entry with its template data */
+export interface ResolvedScheduleEntry {
+  entryId: string;
+  template: WorkoutTemplate;
+}
+
 interface WorkoutScheduleState {
   // Data
   templates: WorkoutTemplate[];
@@ -54,14 +60,20 @@ interface WorkoutScheduleState {
   updateTemplate: (id: string, updates: Partial<Omit<WorkoutTemplate, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<void>;
   deleteTemplate: (id: string) => Promise<void>;
 
+  // Legacy: replaces all entries for a day with one (still used where needed)
   setScheduleEntry: (userId: string, dayOfWeek: number, templateId: string | null) => Promise<void>;
+  // New: add a workout to a day (supports multiple per day)
+  addScheduleEntry: (userId: string, dayOfWeek: number, templateId: string) => Promise<void>;
+  // New: remove a specific schedule entry by its ID
+  removeScheduleEntry: (entryId: string) => Promise<void>;
   clearSchedule: (userId: string) => Promise<void>;
 
   setSelectedTemplate: (template: WorkoutTemplate | null) => void;
 
   // Computed
   getTemplateForDay: (dayOfWeek: number) => WorkoutTemplate | null;
-  getWeeklySchedule: () => { day: typeof DAYS_OF_WEEK[number]; template: WorkoutTemplate | null }[];
+  getTemplatesForDay: (dayOfWeek: number) => ResolvedScheduleEntry[];
+  getWeeklySchedule: () => { day: typeof DAYS_OF_WEEK[number]; entries: ResolvedScheduleEntry[] }[];
 
   // Reset
   reset: () => void;
@@ -83,7 +95,8 @@ export const generateSetId = () => `set_${uuidv4()}`;
 export const createEmptyExercise = (): Exercise => ({
   id: generateExerciseId(),
   name: '',
-  sets: [createEmptySet()],
+  targetSets: 3,
+  targetReps: 12,
 });
 
 // Helper to create a new empty set
@@ -190,6 +203,30 @@ export const useWorkoutScheduleStore = create<WorkoutScheduleState>((set, get) =
     }
   },
 
+  addScheduleEntry: async (userId, dayOfWeek, templateId) => {
+    try {
+      const result = await window.api.addScheduleEntry(userId, dayOfWeek, templateId);
+      set((state) => ({
+        schedule: [...state.schedule, result],
+      }));
+    } catch (error) {
+      console.error('[WorkoutScheduleStore] Failed to add schedule entry:', error);
+      throw error;
+    }
+  },
+
+  removeScheduleEntry: async (entryId) => {
+    try {
+      await window.api.removeScheduleEntry(entryId);
+      set((state) => ({
+        schedule: state.schedule.filter((s) => s.id !== entryId),
+      }));
+    } catch (error) {
+      console.error('[WorkoutScheduleStore] Failed to remove schedule entry:', error);
+      throw error;
+    }
+  },
+
   clearSchedule: async (userId) => {
     try {
       await window.api.clearSchedule(userId);
@@ -204,6 +241,7 @@ export const useWorkoutScheduleStore = create<WorkoutScheduleState>((set, get) =
     set({ selectedTemplate: template });
   },
 
+  // Legacy: returns first template found for a day
   getTemplateForDay: (dayOfWeek) => {
     const { schedule, templates } = get();
     const entry = schedule.find((s) => s.dayOfWeek === dayOfWeek);
@@ -211,12 +249,31 @@ export const useWorkoutScheduleStore = create<WorkoutScheduleState>((set, get) =
     return templates.find((t) => t.id === entry.templateId) || null;
   },
 
+  // New: returns all templates for a day with their entry IDs
+  getTemplatesForDay: (dayOfWeek) => {
+    const { schedule, templates } = get();
+    const entries = schedule.filter((s) => s.dayOfWeek === dayOfWeek);
+    return entries
+      .map((entry) => {
+        const template = templates.find((t) => t.id === entry.templateId);
+        if (!template) return null;
+        return { entryId: entry.id, template };
+      })
+      .filter((e): e is ResolvedScheduleEntry => e !== null);
+  },
+
   getWeeklySchedule: () => {
     const { schedule, templates } = get();
     return DAYS_OF_WEEK.map((day) => {
-      const entry = schedule.find((s) => s.dayOfWeek === day.value);
-      const template = entry ? templates.find((t) => t.id === entry.templateId) || null : null;
-      return { day, template };
+      const dayEntries = schedule.filter((s) => s.dayOfWeek === day.value);
+      const entries: ResolvedScheduleEntry[] = dayEntries
+        .map((entry) => {
+          const template = templates.find((t) => t.id === entry.templateId);
+          if (!template) return null;
+          return { entryId: entry.id, template };
+        })
+        .filter((e): e is ResolvedScheduleEntry => e !== null);
+      return { day, entries };
     });
   },
 

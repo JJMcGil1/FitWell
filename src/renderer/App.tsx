@@ -18,7 +18,7 @@ import { useThemeStore } from './stores/themeStore';
 // TODO: Re-enable UpdateNotification after Apple Developer Program confirmation
 // import { Sidebar, LoadingScreen, Onboarding, UpdateNotification } from './components';
 import { Sidebar, LoadingScreen, Onboarding } from './components';
-import { DashboardPage, CalendarPage, WorkoutsPage, RunningPage, WeightPage, GoalsPage, AchievementsPage, SettingsPage } from './pages';
+import { DashboardPage, CalendarPage, WorkoutsPage, RunningPage, WeightPage, VolumePage, GoalsPage, AchievementsPage, SettingsPage } from './pages';
 
 // ⚠️ DEV FLAG: Set to true to force show onboarding screen for development
 const DEV_SHOW_ONBOARDING = false;
@@ -108,6 +108,8 @@ const App: React.FC = () => {
         return <RunningPage />;
       case 'weight':
         return <WeightPage />;
+      case 'volume':
+        return <VolumePage />;
       case 'goals':
         return <GoalsPage />;
       case 'achievements':

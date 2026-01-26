@@ -11,6 +11,7 @@ import { useUserStore } from '../stores/userStore';
 import { useGoalStore } from '../stores/goalStore';
 import type { WeightEntry } from '../../shared/types';
 import { HiOutlinePlus, HiOutlineTrash, HiOutlineScale, HiOutlineCheckCircle, HiOutlineChartBar } from 'react-icons/hi2';
+import { CardMenu } from '../components/CardMenu';
 
 type DateRange = '7d' | '30d' | '90d' | '1y' | 'all';
 
@@ -348,7 +349,7 @@ export const WeightPage: React.FC = () => {
               const change = prevEntry ? entry.weight - prevEntry.weight : null;
 
               return (
-                <div key={entry.id} className="card p-4 flex items-center gap-4">
+                <div key={entry.id} className="group card p-4 flex items-center gap-4">
                   {/* Date */}
                   <div className="w-20 text-sm text-gray-500 dark:text-gray-400">
                     {formatFullDate(entry.date)}
@@ -377,14 +378,17 @@ export const WeightPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Delete button */}
-                  <button
-                    onClick={() => handleDelete(entry.id)}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                    title="Delete entry"
-                  >
-                    <HiOutlineTrash className="w-4 h-4" />
-                  </button>
+                  {/* Three-dot menu — visible on hover */}
+                  <CardMenu
+                    items={[
+                      {
+                        label: 'Delete',
+                        icon: <HiOutlineTrash className="w-4 h-4" />,
+                        onClick: () => handleDelete(entry.id),
+                        variant: 'danger',
+                      },
+                    ]}
+                  />
                 </div>
               );
             })}

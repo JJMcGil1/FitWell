@@ -64,10 +64,16 @@ export interface WeightEntry {
 
 export type WorkoutType = 'strength' | 'cardio' | 'flexibility' | 'sports' | 'other';
 
+export type ExerciseTargetUnit = 'reps' | 'seconds' | 'minutes';
+
 export interface Exercise {
   id: string;
   name: string;
   sets?: ExerciseSet[];
+  targetSets?: number; // For routine templates: number of sets
+  targetReps?: number; // For routine templates: reps per set (or seconds/minutes when targetUnit is set)
+  targetUnit?: ExerciseTargetUnit; // Unit for targetReps: 'reps' (default), 'seconds', or 'minutes' (for planks, holds, etc.)
+  tilFailure?: boolean; // For routine templates: do reps until failure
   duration?: number; // minutes (for cardio)
   distance?: number; // miles or km (for cardio)
   notes?: string;
@@ -135,19 +141,26 @@ export interface WeeklySchedule {
 }
 
 // ============================================
-// Running Types
+// Cardio Types
 // ============================================
 
-export type RunType = 'easy' | 'tempo' | 'interval' | 'long' | 'recovery' | 'race';
+export type CardioType = 'running' | 'walking' | 'cycling' | 'stairmaster' | 'elliptical' | 'rowing' | 'swimming' | 'hiit' | 'jump_rope' | 'other';
+export type SessionIntensity = 'easy' | 'tempo' | 'interval' | 'long' | 'recovery' | 'race';
+export type DistanceUnit = 'miles' | 'km' | 'meters' | 'yards' | 'laps' | 'floors' | 'steps';
+
+// Legacy alias for backward compatibility
+export type RunType = SessionIntensity;
 
 export interface Run {
   id: string;
   userId: string;
   date: string; // YYYY-MM-DD format
-  type: RunType;
-  distance: number; // miles
+  cardioType?: CardioType; // Type of cardio activity (defaults to 'running' for legacy data)
+  type: SessionIntensity; // Intensity/purpose of the session
+  distance: number; // distance value in the specified unit
+  distanceUnit?: DistanceUnit; // unit for distance (defaults to 'miles' for legacy data)
   duration: number; // minutes
-  pace?: number; // minutes per mile (calculated)
+  pace?: number; // minutes per unit (calculated, mainly for running/cycling)
   calories?: number;
   heartRateAvg?: number;
   heartRateMax?: number;
@@ -280,6 +293,8 @@ export interface IpcApi {
   // Weekly Schedule operations
   getSchedule: (userId: string) => Promise<ScheduleEntry[]>;
   setScheduleEntry: (userId: string, dayOfWeek: number, templateId: string | null) => Promise<ScheduleEntry | null>;
+  addScheduleEntry: (userId: string, dayOfWeek: number, templateId: string) => Promise<ScheduleEntry>;
+  removeScheduleEntry: (id: string) => Promise<void>;
   clearSchedule: (userId: string) => Promise<void>;
 
   // Run operations
