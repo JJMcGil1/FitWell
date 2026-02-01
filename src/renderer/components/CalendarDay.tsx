@@ -3,6 +3,7 @@
  *
  * Shows workout/run activity for each day.
  * Days with any workout or run are marked as complete.
+ * Shows scheduled workout routine badges from the weekly schedule.
  * Click to quick-log a workout or remove it.
  */
 
@@ -11,6 +12,7 @@ import { format } from 'date-fns';
 import { useWorkoutStore } from '../stores/workoutStore';
 import { useRunStore } from '../stores/runStore';
 import { useUserStore } from '../stores/userStore';
+import { useWorkoutScheduleStore } from '../stores/workoutScheduleStore';
 
 interface CalendarDayProps {
   date: Date;
@@ -28,10 +30,12 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
   const { currentUser } = useUserStore();
   const { getWorkoutsByDate, createWorkout, deleteWorkout } = useWorkoutStore();
   const { getRunsByDate } = useRunStore();
+  const { getTemplatesForDay } = useWorkoutScheduleStore();
   const [isPending, setIsPending] = useState(false);
 
   const dateStr = format(date, 'yyyy-MM-dd');
   const dayNum = format(date, 'd');
+  const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
 
   // Get workouts and runs for this day
   const workouts = getWorkoutsByDate(dateStr);
@@ -41,7 +45,21 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
   const hasRuns = runs.length > 0;
   const hasActivity = hasWorkouts || hasRuns;
 
+  // Get scheduled workout templates for this day of week
+  const scheduledEntries = getTemplatesForDay(dayOfWeek);
+  const hasSchedule = scheduledEntries.length > 0;
+
   const canInteract = isCurrentMonth && !isFuture;
+
+  // Badge state: 'completed' | 'scheduled' | 'missed' | null
+  const getBadgeState = () => {
+    if (!hasSchedule || !isCurrentMonth) return null;
+    if (hasActivity) return 'completed';
+    if (isFuture || isToday) return 'scheduled';
+    return 'missed';
+  };
+
+  const badgeState = getBadgeState();
 
   // Simple toggle: click to check off, click again to uncheck
   const handleClick = async () => {
@@ -86,12 +104,12 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
       disabled={!canInteract}
       className={`
         calendar-day group
-        relative flex items-center justify-center rounded-xl
+        relative flex flex-col items-center justify-center rounded-xl
         bg-transparent
         transition-transform duration-200 ease-out will-change-transform
         ${canInteract ? 'cursor-pointer hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]' : 'cursor-default'}
       `}
-      aria-label={`${format(date, 'MMMM d, yyyy')}${hasActivity ? ' - Has activity' : ''}`}
+      aria-label={`${format(date, 'MMMM d, yyyy')}${hasActivity ? ' - Has activity' : ''}${hasSchedule ? ` - Scheduled: ${scheduledEntries.map(e => e.template.name).join(', ')}` : ''}`}
     >
       {/* Hover background */}
       {canInteract && !hasActivity && (
@@ -133,7 +151,7 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
       {/* Centered checkmark */}
       <div
         className={`
-          absolute inset-0 flex items-center justify-center
+          absolute inset-0 flex flex-col items-center justify-center
           transition-all duration-200 ease-out
           ${hasActivity ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}
         `}
@@ -151,7 +169,35 @@ export const CalendarDay: React.FC<CalendarDayProps> = ({
             strokeLinejoin="round"
           />
         </svg>
+
+        {/* Today indicator — small underline beneath checkmark */}
+        {isToday && (
+          <div className="w-4 h-[2.5px] rounded-full bg-white/80 mt-0.5" />
+        )}
       </div>
+
+      {/* Workout routine badges — top left, stacked */}
+      {badgeState && (
+        <div className="absolute top-1.5 left-1.5 z-10 flex flex-col items-start gap-[3px] max-w-[calc(100%-12px)]">
+          {scheduledEntries.map((entry) => (
+            <span
+              key={entry.entryId}
+              className={`
+                text-[8px] font-semibold leading-none truncate max-w-full
+                px-[5px] py-[2px] rounded-[3px]
+                ${badgeState === 'completed'
+                  ? 'bg-white/30 dark:bg-white/20 text-emerald-900 dark:text-emerald-100'
+                  : badgeState === 'scheduled'
+                    ? 'bg-gray-100 dark:bg-neutral-700 text-gray-500 dark:text-gray-400'
+                    : 'bg-gray-100 dark:bg-neutral-800 text-gray-300 dark:text-neutral-600 line-through'
+                }
+              `}
+            >
+              {entry.template.name}
+            </span>
+          ))}
+        </div>
+      )}
     </button>
   );
 };

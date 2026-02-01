@@ -12,17 +12,18 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigationStore, type Page } from '../stores/navigationStore';
 import { useUserStore } from '../stores/userStore';
 import { useWorkoutStore } from '../stores/workoutStore';
+import { useRunStore } from '../stores/runStore';
 import { useWeightStore } from '../stores/weightStore';
 import { format, subDays } from 'date-fns';
 import logoFull from '../../../assets/fitwell-logo.svg';
 import logoIcon from '../../../assets/fitwell-logo-icon.svg';
 import { FaPersonRunning } from 'react-icons/fa6';
 import { FaFire } from 'react-icons/fa';
-import { LuLayoutDashboard, LuScale, LuWeight, LuChevronsLeft, LuChevronsRight } from 'react-icons/lu';
+import { LuLayoutDashboard, LuScale, LuWeight, LuChevronsLeft, LuChevronsRight, LuDumbbell } from 'react-icons/lu';
 import { AiOutlineSchedule } from 'react-icons/ai';
 import { BsCalendar2Check } from 'react-icons/bs';
 import { GoGoal } from 'react-icons/go';
-import { GrAchievement } from 'react-icons/gr';
+import { HiOutlineTrophy } from 'react-icons/hi2';
 import { IoScale } from 'react-icons/io5';
 
 const SIDEBAR_COLLAPSED_KEY = 'fitwell-sidebar-collapsed';
@@ -55,14 +56,19 @@ const navItems: NavItem[] = [
     Icon: FaPersonRunning,
   },
   {
-    id: 'weight',
-    label: 'Weight',
-    Icon: LuScale,
-  },
-  {
     id: 'volume',
     label: 'Volume',
     Icon: LuWeight,
+  },
+  {
+    id: 'weight',
+    label: 'Weight Tracking',
+    Icon: LuScale,
+  },
+  {
+    id: 'workout-library',
+    label: 'Workout Library',
+    Icon: LuDumbbell,
   },
   {
     id: 'goals',
@@ -75,6 +81,7 @@ export const Sidebar: React.FC = () => {
   const { currentPage, navigate } = useNavigationStore();
   const { currentUser, isSwitching } = useUserStore();
   const { workouts } = useWorkoutStore();
+  const { runs } = useRunStore();
   const { getLatestWeight } = useWeightStore();
 
   // Collapsed state with localStorage persistence
@@ -89,18 +96,21 @@ export const Sidebar: React.FC = () => {
 
   const toggleCollapsed = () => setIsCollapsed(!isCollapsed);
 
-  // Calculate current streak from workouts (consecutive days with workouts)
+  // Calculate current streak from all activity (workouts + cardio)
   const currentStreak = useMemo(() => {
-    if (workouts.length === 0) return 0;
+    if (workouts.length === 0 && runs.length === 0) return 0;
 
-    const workoutDates = new Set(workouts.map(w => w.date));
+    const activityDates = new Set([
+      ...workouts.map(w => w.date),
+      ...runs.map(r => r.date),
+    ]);
     const today = new Date();
     let streak = 0;
 
     // Check from today backwards
     for (let i = 0; i < 365; i++) {
       const checkDate = format(subDays(today, i), 'yyyy-MM-dd');
-      if (workoutDates.has(checkDate)) {
+      if (activityDates.has(checkDate)) {
         streak++;
       } else if (i > 0) {
         // Allow today to be missing (streak continues from yesterday)
@@ -109,7 +119,7 @@ export const Sidebar: React.FC = () => {
     }
 
     return streak;
-  }, [workouts]);
+  }, [workouts, runs]);
 
   // Get latest weight
   const latestWeight = getLatestWeight();
@@ -125,7 +135,7 @@ export const Sidebar: React.FC = () => {
       <div className="h-8 drag-region flex-shrink-0" />
 
       {/* Logo - crossfade transition */}
-      <div className="py-4 px-3 relative h-[72px]">
+      <div className="py-4 px-3 relative h-[72px] flex-shrink-0">
         {/* Full logo - fades out when collapsed */}
         <img
           src={logoFull}
@@ -150,8 +160,8 @@ export const Sidebar: React.FC = () => {
         />
       </div>
 
-      {/* Navigation */}
-      <nav className="pt-2 px-3">
+      {/* Navigation — scrollable when sidebar is short */}
+      <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden sidebar-scroll pt-2 px-3">
         <ul className="space-y-1">
           {navItems.map((item) => {
             const isActive = currentPage === item.id;
@@ -221,20 +231,17 @@ export const Sidebar: React.FC = () => {
         </ul>
       </nav>
 
-      {/* Spacer */}
-      <div className="flex-1" />
-
       {/* Divider - full width */}
-      <div className="border-t border-neutral-700" />
+      <div className="border-t border-neutral-700 flex-shrink-0" />
 
-      {/* Bottom section */}
-      <div className="pb-4 px-3 pt-2">
+      {/* Bottom section — always pinned to bottom */}
+      <div className="pb-4 px-3 pt-2 flex-shrink-0">
         {/* Collapse toggle button */}
         <button
           onClick={toggleCollapsed}
-          className="w-full flex items-center justify-center py-2 mb-1 rounded-lg relative group
-            text-neutral-500 hover:text-neutral-300 hover:bg-white/[0.04]
-            transition-all duration-200 ease-out
+          className="w-full flex items-center justify-center py-2.5 mb-1 rounded-lg relative group
+            text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04] active:bg-white/[0.06]
+            transition-all duration-300 ease-out
             outline-none focus:outline-none"
         >
           {isCollapsed ? (
@@ -285,13 +292,13 @@ export const Sidebar: React.FC = () => {
 
           {/* Icon with smooth size transition */}
           <span className={`
-            transition-all duration-300 ease-out flex-shrink-0
+            flex-shrink-0
             ${currentPage === 'achievements'
               ? 'text-orange-400'
               : 'text-neutral-500 group-hover:text-neutral-400'
             }
           `}>
-            <GrAchievement className={`transition-all duration-300 ${isCollapsed ? 'w-6 h-6' : 'w-5 h-5'}`} />
+            <HiOutlineTrophy className={`transition-all duration-300 ${isCollapsed ? 'w-6 h-6' : 'w-5 h-5'}`} />
           </span>
 
           {/* Label with smooth fade transition */}
@@ -325,10 +332,11 @@ export const Sidebar: React.FC = () => {
             onClick={() => navigate('settings')}
             disabled={isSwitching}
             className={`
-              w-full flex items-center gap-3 py-2.5 px-4 rounded-lg mt-1
+              w-full flex items-center py-2.5 rounded-lg mt-1
               transition-all duration-300 ease-out relative group
               hover:bg-white/[0.04] active:bg-white/[0.06]
               outline-none focus:outline-none
+              ${isCollapsed ? 'justify-center' : 'gap-3 px-4'}
               ${currentPage === 'settings' ? 'bg-white/[0.08]' : ''}
               ${isSwitching ? 'pointer-events-none' : ''}
             `}

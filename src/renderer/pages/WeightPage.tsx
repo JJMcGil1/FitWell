@@ -24,8 +24,6 @@ export const WeightPage: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newWeight, setNewWeight] = useState('');
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newNotes, setNewNotes] = useState('');
-
   // Get weight goal if exists
   const weightGoal = goals.find((g) => g.type === 'weight' && g.isActive);
   const targetWeight = weightGoal?.targetValue;
@@ -96,12 +94,10 @@ export const WeightPage: React.FC = () => {
       date: newDate,
       weight,
       unit: 'lbs',
-      notes: newNotes || undefined,
     });
 
     setNewWeight('');
     setNewDate(new Date().toISOString().split('T')[0]);
-    setNewNotes('');
     setShowAddForm(false);
   };
 
@@ -124,12 +120,12 @@ export const WeightPage: React.FC = () => {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-6 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Weight Progress</h2>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight">Weight Tracking</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             Track your weight over time
           </p>
         </div>
@@ -143,71 +139,90 @@ export const WeightPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Add Weight Form */}
+      {/* Log Weight Modal */}
       {showAddForm && (
-        <div className="card p-5 mb-6 animate-fade-in">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Log Weight Entry</h3>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowAddForm(false);
+              setNewWeight('');
+            }
+          }}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in" />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">
-                Weight (lbs)
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                value={newWeight}
-                onChange={(e) => setNewWeight(e.target.value)}
-                placeholder="e.g., 165.5"
-                className="input"
-                autoFocus
-              />
+          {/* Modal */}
+          <div className="relative bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 animate-fade-in">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-6 pb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Log Weight</h3>
+              <button
+                onClick={() => {
+                  setShowAddForm(false);
+                  setNewWeight('');
+                }}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-300 dark:hover:bg-neutral-700 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">
-                Date
-              </label>
-              <input
-                type="date"
-                value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
-                className="input"
-              />
+            {/* Body */}
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                  Weight (lbs)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={newWeight}
+                  onChange={(e) => setNewWeight(e.target.value)}
+                  placeholder="e.g., 165.5"
+                  className="input"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newWeight) handleAddEntry();
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={newDate}
+                  onChange={(e) => setNewDate(e.target.value)}
+                  className="input"
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1.5">
-                Notes (optional)
-              </label>
-              <input
-                type="text"
-                value={newNotes}
-                onChange={(e) => setNewNotes(e.target.value)}
-                placeholder="e.g., After workout"
-                className="input"
-              />
+            {/* Footer */}
+            <div className="flex gap-3 px-6 pb-6 pt-2">
+              <button
+                onClick={handleAddEntry}
+                disabled={!newWeight}
+                className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save Entry
+              </button>
+              <button
+                onClick={() => {
+                  setShowAddForm(false);
+                  setNewWeight('');
+                }}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
             </div>
-          </div>
-
-          <div className="flex gap-3 mt-4">
-            <button
-              onClick={handleAddEntry}
-              disabled={!newWeight}
-              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Save Entry
-            </button>
-            <button
-              onClick={() => {
-                setShowAddForm(false);
-                setNewWeight('');
-                setNewNotes('');
-              }}
-              className="btn-secondary"
-            >
-              Cancel
-            </button>
           </div>
         </div>
       )}

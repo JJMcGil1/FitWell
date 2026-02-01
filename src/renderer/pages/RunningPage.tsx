@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUserStore } from '../stores/userStore';
-import { useRunStore, formatPace, formatDuration, formatTotalDuration } from '../stores/runStore';
+import { useRunStore, formatPace, formatDuration, formatTotalDuration, splitDuration } from '../stores/runStore';
 import type { Run, SessionIntensity, CardioType, DistanceUnit } from '../../shared/types';
 import { format, subDays, isToday, isYesterday, parseISO } from 'date-fns';
 import { HiOutlinePlus, HiOutlineXMark, HiOutlinePencilSquare, HiOutlineTrash, HiOutlineClock, HiOutlineFire, HiOutlineArrowTrendingUp } from 'react-icons/hi2';
@@ -17,7 +17,7 @@ import { TbStairs } from 'react-icons/tb';
 import { MdOutlineDirectionsBike, MdOutlineFitnessCenter } from 'react-icons/md';
 import { GiJumpingRope } from 'react-icons/gi';
 import { LuWaves, LuGauge } from 'react-icons/lu';
-import { PiCompassRoseBold, PiMapPinLineBold } from 'react-icons/pi';
+import { PiMapPinLineBold } from 'react-icons/pi';
 import { BsThreeDots } from 'react-icons/bs';
 import { Dropdown } from '../components/Dropdown';
 import type { DropdownOption } from '../components/Dropdown';
@@ -239,26 +239,57 @@ export const RunningPage: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 border border-gray-200 dark:border-neutral-700">
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">This Week</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.thisWeekRuns}</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            {stats.thisWeekRuns === 1 ? 'session' : 'sessions'}{stats.thisWeekDuration > 0 ? ` · ${formatTotalDuration(stats.thisWeekDuration)}` : ''}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        {/* Total Sessions */}
+        <div className="bg-white dark:bg-neutral-800 rounded-xl px-4 py-3.5 border border-gray-200 dark:border-neutral-700">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-6 h-6 rounded-lg bg-brand-50 dark:bg-brand-500/10 flex items-center justify-center">
+              <FaPersonRunning className="w-3 h-3 text-brand-500" />
+            </div>
+            <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Sessions</span>
+          </div>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">{stats.totalRuns}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            {stats.thisWeekRuns} this week · {stats.thisMonthRuns} this month
           </p>
         </div>
-        <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 border border-gray-200 dark:border-neutral-700">
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">This Month</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatTotalDuration(stats.thisMonthDuration)}</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            {stats.thisMonthRuns} {stats.thisMonthRuns === 1 ? 'session' : 'sessions'}{stats.thisMonthCalories > 0 ? ` · ${stats.thisMonthCalories.toLocaleString()} cal` : ''}
+
+        {/* Total Distance */}
+        <div className="bg-white dark:bg-neutral-800 rounded-xl px-4 py-3.5 border border-gray-200 dark:border-neutral-700">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
+              <PiMapPinLineBold className="w-3 h-3 text-blue-500" />
+            </div>
+            <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Distance</span>
+          </div>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+            {stats.totalDistance > 0 ? stats.totalDistance.toFixed(2) : '0.00'}
+            <span className="text-sm font-semibold text-gray-400 dark:text-gray-500 ml-0.5">mi</span>
+          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            {stats.thisWeekDistance > 0 ? stats.thisWeekDistance.toFixed(2) : '0.00'} this week · {stats.thisMonthDistance > 0 ? stats.thisMonthDistance.toFixed(2) : '0.00'} this month
           </p>
         </div>
-        <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 border border-gray-200 dark:border-neutral-700">
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">All Time</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalRuns}</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            {stats.totalRuns === 1 ? 'session' : 'sessions'}{stats.totalDuration > 0 ? ` · ${formatTotalDuration(stats.totalDuration)}` : ''}
+
+        {/* Total Time */}
+        <div className="bg-white dark:bg-neutral-800 rounded-xl px-4 py-3.5 border border-gray-200 dark:border-neutral-700">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+              <HiOutlineClock className="w-3 h-3 text-emerald-500" />
+            </div>
+            <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Time</span>
+          </div>
+          {(() => {
+            const dur = splitDuration(stats.totalDuration);
+            return (
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+                {dur.value}
+                <span className="text-sm font-semibold text-gray-400 dark:text-gray-500 ml-0.5">{dur.unit}</span>
+              </p>
+            );
+          })()}
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            {stats.thisWeekDuration > 0 ? formatTotalDuration(stats.thisWeekDuration) : '0 min'} this week · {stats.thisMonthDuration > 0 ? formatTotalDuration(stats.thisMonthDuration) : '0 min'} this month
           </p>
         </div>
       </div>
@@ -290,7 +321,7 @@ export const RunningPage: React.FC = () => {
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center max-w-sm">
               <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-100 dark:bg-neutral-800 flex items-center justify-center">
-                <PiCompassRoseBold className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+                <FaPersonRunning className="w-8 h-8 text-gray-400 dark:text-gray-500" />
               </div>
               <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
                 No sessions logged
@@ -318,7 +349,6 @@ export const RunningPage: React.FC = () => {
                     const cardioConfig = getCardioTypeConfig(session.cardioType || 'running');
                     const unitConfig = getDistanceUnitConfig(session.distanceUnit || 'miles');
                     const sessionDateObj = parseISO(session.date);
-                    const dateLabel = format(sessionDateObj, 'MMM d, yyyy');
 
                     return (
                       <div

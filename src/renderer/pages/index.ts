@@ -7,4 +7,5 @@ export { WeightPage } from './WeightPage';
 export { VolumePage } from './VolumePage';
 export { GoalsPage } from './GoalsPage';
 export { AchievementsPage } from './AchievementsPage';
+export { WorkoutLibraryPage } from './WorkoutLibraryPage';
 export { SettingsPage } from './SettingsPage';

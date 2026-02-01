@@ -6,7 +6,31 @@
  */
 
 import { create } from 'zustand';
-import type { Run, CardioType } from '../../shared/types';
+import type { Run, CardioType, DistanceUnit } from '../../shared/types';
+
+/**
+ * Convert a distance value from any supported unit to miles.
+ * Units without a meaningful mile conversion (laps, floors, steps) are excluded
+ * from distance totals — they return 0.
+ */
+export const toMiles = (distance: number, unit: DistanceUnit = 'miles'): number => {
+  switch (unit) {
+    case 'miles':
+      return distance;
+    case 'km':
+      return distance * 0.621371;
+    case 'meters':
+      return distance * 0.000621371;
+    case 'yards':
+      return distance * 0.000568182;
+    // laps / floors / steps have no standard mile equivalent — exclude from totals
+    case 'laps':
+    case 'floors':
+    case 'steps':
+    default:
+      return 0;
+  }
+};
 
 interface RunState {
   // Data
@@ -153,7 +177,9 @@ export const useRunStore = create<RunState>((set, get) => ({
     const thisWeekRuns = runs.filter((r) => new Date(r.date) >= startOfWeek);
     const thisMonthRuns = runs.filter((r) => new Date(r.date) >= startOfMonth);
 
-    const totalDistance = runs.reduce((sum, r) => sum + r.distance, 0);
+    const distanceInMiles = (r: Run) => toMiles(r.distance, r.distanceUnit || 'miles');
+
+    const totalDistance = runs.reduce((sum, r) => sum + distanceInMiles(r), 0);
     const totalDuration = runs.reduce((sum, r) => sum + r.duration, 0);
     const totalCalories = runs.reduce((sum, r) => sum + (r.calories || 0), 0);
 
@@ -167,7 +193,7 @@ export const useRunStore = create<RunState>((set, get) => ({
       : 0;
 
     const longestRun = runs.length > 0
-      ? Math.max(...runs.map((r) => r.distance))
+      ? Math.max(...runs.map((r) => distanceInMiles(r)))
       : 0;
 
     return {
@@ -177,10 +203,10 @@ export const useRunStore = create<RunState>((set, get) => ({
       totalCalories,
       averagePace,
       thisWeekRuns: thisWeekRuns.length,
-      thisWeekDistance: thisWeekRuns.reduce((sum, r) => sum + r.distance, 0),
+      thisWeekDistance: thisWeekRuns.reduce((sum, r) => sum + distanceInMiles(r), 0),
       thisWeekDuration: thisWeekRuns.reduce((sum, r) => sum + r.duration, 0),
       thisMonthRuns: thisMonthRuns.length,
-      thisMonthDistance: thisMonthRuns.reduce((sum, r) => sum + r.distance, 0),
+      thisMonthDistance: thisMonthRuns.reduce((sum, r) => sum + distanceInMiles(r), 0),
       thisMonthDuration: thisMonthRuns.reduce((sum, r) => sum + r.duration, 0),
       thisMonthCalories: thisMonthRuns.reduce((sum, r) => sum + (r.calories || 0), 0),
       longestRun,
@@ -213,12 +239,36 @@ export const formatDuration = (minutes: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-// Utility to format total duration as "Xh Ym"
+// Utility to format total duration — scales to min / hr / days
 export const formatTotalDuration = (minutes: number): string => {
-  const hours = Math.floor(minutes / 60);
-  const mins = Math.round(minutes % 60);
-  if (hours > 0) {
-    return `${hours}h ${mins}m`;
+  const totalHours = minutes / 60;
+  const totalDays = totalHours / 24;
+
+  if (totalDays >= 1) {
+    const days = Math.floor(totalDays);
+    const remainingHrs = Math.round(totalHours - days * 24);
+    return remainingHrs > 0 ? `${days}d ${remainingHrs}hr` : `${days}d`;
   }
-  return `${mins}m`;
+  if (totalHours >= 1) {
+    const hrs = Math.floor(totalHours);
+    const remainingMins = Math.round(minutes - hrs * 60);
+    return remainingMins > 0 ? `${hrs}hr ${remainingMins}min` : `${hrs}hr`;
+  }
+  return `${Math.round(minutes)}min`;
+};
+
+// Utility to split duration into { value, unit } for stat card display
+export const splitDuration = (minutes: number): { value: string; unit: string } => {
+  const totalHours = minutes / 60;
+  const totalDays = totalHours / 24;
+
+  if (totalDays >= 1) {
+    const rounded = totalDays % 1 === 0 ? totalDays.toString() : totalDays.toFixed(1);
+    return { value: rounded, unit: totalDays === 1 ? 'day' : 'days' };
+  }
+  if (totalHours >= 1) {
+    const rounded = totalHours % 1 === 0 ? totalHours.toString() : totalHours.toFixed(1);
+    return { value: rounded, unit: 'hr' };
+  }
+  return { value: Math.round(minutes).toString(), unit: 'min' };
 };

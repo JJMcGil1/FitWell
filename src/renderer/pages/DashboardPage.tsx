@@ -9,7 +9,7 @@ import React, { useEffect, useMemo } from 'react';
 import { useUserStore } from '../stores/userStore';
 import { useWeightStore } from '../stores/weightStore';
 import { useWorkoutStore } from '../stores/workoutStore';
-import { useRunStore } from '../stores/runStore';
+import { useRunStore, toMiles } from '../stores/runStore';
 import { useNavigationStore } from '../stores/navigationStore';
 import { format, startOfWeek, subDays, isSameDay, addDays, differenceInDays, parseISO } from 'date-fns';
 import { HiOutlineChevronRight, HiOutlineCheck, HiOutlineTrophy } from 'react-icons/hi2';
@@ -373,54 +373,78 @@ export const DashboardPage: React.FC = () => {
   const workoutStats = useMemo(() => getWorkoutStats(), [workouts]);
   const latestWeight = useMemo(() => getLatestWeight(), [weightEntries]);
 
-  // Calculate current streak
+  // Calculate combined activity stats (workouts + cardio = unique active days)
+  const activityStats = useMemo(() => {
+    const now = new Date();
+    const startOfMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const allActivityDates = [
+      ...workouts.map(w => w.date),
+      ...runs.map(r => r.date),
+    ];
+
+    const uniqueTotal = new Set(allActivityDates).size;
+    const uniqueThisMonth = new Set(
+      allActivityDates.filter(d => new Date(d) >= startOfMonthDate)
+    ).size;
+
+    return { total: uniqueTotal, thisMonth: uniqueThisMonth };
+  }, [workouts, runs]);
+
+  // Calculate current streak (workouts + cardio sessions)
   const currentStreak = useMemo(() => {
-    if (workouts.length === 0) return 0;
-    const workoutDates = new Set(workouts.map(w => w.date));
+    if (workouts.length === 0 && runs.length === 0) return 0;
+    const activityDates = new Set([
+      ...workouts.map(w => w.date),
+      ...runs.map(r => r.date),
+    ]);
     const today = new Date();
     let streak = 0;
     for (let i = 0; i < 365; i++) {
       const checkDate = format(subDays(today, i), 'yyyy-MM-dd');
-      if (workoutDates.has(checkDate)) {
+      if (activityDates.has(checkDate)) {
         streak++;
       } else if (i > 0) {
         break;
       }
     }
     return streak;
-  }, [workouts]);
+  }, [workouts, runs]);
 
-  // Check if user has workout today
+  // Check if user has activity today (workout or cardio)
   const hasWorkoutToday = useMemo(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
-    return workouts.some(w => w.date === today);
-  }, [workouts]);
+    return workouts.some(w => w.date === today) || runs.some(r => r.date === today);
+  }, [workouts, runs]);
 
   const totalMiles = useMemo(() => {
-    return runs.reduce((sum, run) => sum + run.distance, 0);
+    return runs.reduce((sum, run) => sum + toMiles(run.distance, run.distanceUnit || 'miles'), 0);
   }, [runs]);
 
-  // Calculate workout percentage since first workout
+  // Calculate activity percentage since first activity (workouts + cardio)
   const workoutPercentage = useMemo(() => {
-    if (workouts.length === 0) return { percentage: 0, totalDays: 0, workoutDays: 0 };
+    if (workouts.length === 0 && runs.length === 0) return { percentage: 0, totalDays: 0, workoutDays: 0 };
 
-    // Get unique workout dates
-    const uniqueDates = new Set(workouts.map(w => w.date));
+    // Get unique activity dates (workouts + runs)
+    const uniqueDates = new Set([
+      ...workouts.map(w => w.date),
+      ...runs.map(r => r.date),
+    ]);
     const workoutDays = uniqueDates.size;
 
-    // Find the earliest workout date
+    // Find the earliest activity date
     const sortedDates = [...uniqueDates].sort();
     const firstWorkoutDate = parseISO(sortedDates[0]);
     const today = new Date();
 
-    // Calculate total days since first workout (inclusive)
+    // Calculate total days since first activity (inclusive)
     const totalDays = differenceInDays(today, firstWorkoutDate) + 1;
 
     // Calculate percentage
     const percentage = Math.round((workoutDays / totalDays) * 100);
 
     return { percentage, totalDays, workoutDays };
-  }, [workouts]);
+  }, [workouts, runs]);
 
   // Calculate total volume lifted (reps × weight across all sets)
   const totalVolume = useMemo(() => {
@@ -450,17 +474,23 @@ export const DashboardPage: React.FC = () => {
     return { raw: volume, formatted: formatVolume(volume), totalSets };
   }, [workouts]);
 
-  // Calculate best (longest) streak ever
+  // Calculate best (longest) streak ever (workouts + cardio)
   const bestStreak = useMemo(() => {
-    if (workouts.length === 0) return 0;
+    if (workouts.length === 0 && runs.length === 0) return 0;
 
-    const workoutDates = [...new Set(workouts.map(w => w.date))].sort();
+    const activityDates = [...new Set([
+      ...workouts.map(w => w.date),
+      ...runs.map(r => r.date),
+    ])].sort();
+
+    if (activityDates.length === 0) return 0;
+
     let longest = 1;
     let current = 1;
 
-    for (let i = 1; i < workoutDates.length; i++) {
-      const prevDate = parseISO(workoutDates[i - 1]);
-      const currDate = parseISO(workoutDates[i]);
+    for (let i = 1; i < activityDates.length; i++) {
+      const prevDate = parseISO(activityDates[i - 1]);
+      const currDate = parseISO(activityDates[i]);
       const daysDiff = differenceInDays(currDate, prevDate);
 
       if (daysDiff === 1) {
@@ -472,7 +502,7 @@ export const DashboardPage: React.FC = () => {
     }
 
     return longest;
-  }, [workouts]);
+  }, [workouts, runs]);
 
   // Build weekly data for visualization
   const weekData = useMemo(() => {
@@ -524,16 +554,16 @@ export const DashboardPage: React.FC = () => {
         <div className="flex flex-wrap gap-4">
           <StatCard
             title="Workouts"
-            value={workoutStats.total}
-            subtitle={`${workoutStats.thisMonth} this month`}
+            value={activityStats.total}
+            subtitle={`${activityStats.thisMonth} this month`}
             icon={<GiWeightLiftingUp className="w-6 h-6" />}
             accentColor="orange"
-            onClick={() => navigate('workouts')}
+            onClick={() => navigate('calendar')}
           />
 
           <StatCard
             title="Cardio"
-            value={`${totalMiles.toFixed(1)} mi`}
+            value={`${totalMiles.toFixed(2)} mi`}
             subtitle={`${runs.length} total entries`}
             icon={<FaPersonRunning className="w-6 h-6" />}
             accentColor="blue"
