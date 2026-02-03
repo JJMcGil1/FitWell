@@ -8,13 +8,11 @@
  * - Collapsible to icon-only mode
  */
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigationStore, type Page } from '../stores/navigationStore';
 import { useUserStore } from '../stores/userStore';
-import { useWorkoutStore } from '../stores/workoutStore';
-import { useRunStore } from '../stores/runStore';
 import { useWeightStore } from '../stores/weightStore';
-import { format, subDays } from 'date-fns';
+import { useAchievementStore } from '../stores/achievementStore';
 import logoFull from '../../../assets/fitwell-logo.svg';
 import logoIcon from '../../../assets/fitwell-logo-icon.svg';
 import { FaPersonRunning } from 'react-icons/fa6';
@@ -80,9 +78,8 @@ const navItems: NavItem[] = [
 export const Sidebar: React.FC = () => {
   const { currentPage, navigate } = useNavigationStore();
   const { currentUser, isSwitching } = useUserStore();
-  const { workouts } = useWorkoutStore();
-  const { runs } = useRunStore();
   const { getLatestWeight } = useWeightStore();
+  const { stats } = useAchievementStore();
 
   // Collapsed state with localStorage persistence
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -96,30 +93,8 @@ export const Sidebar: React.FC = () => {
 
   const toggleCollapsed = () => setIsCollapsed(!isCollapsed);
 
-  // Calculate current streak from all activity (workouts + cardio)
-  const currentStreak = useMemo(() => {
-    if (workouts.length === 0 && runs.length === 0) return 0;
-
-    const activityDates = new Set([
-      ...workouts.map(w => w.date),
-      ...runs.map(r => r.date),
-    ]);
-    const today = new Date();
-    let streak = 0;
-
-    // Check from today backwards
-    for (let i = 0; i < 365; i++) {
-      const checkDate = format(subDays(today, i), 'yyyy-MM-dd');
-      if (activityDates.has(checkDate)) {
-        streak++;
-      } else if (i > 0) {
-        // Allow today to be missing (streak continues from yesterday)
-        break;
-      }
-    }
-
-    return streak;
-  }, [workouts, runs]);
+  // All-time streak from achievement stats (calculated at database level)
+  const currentStreak = stats?.currentStreak ?? 0;
 
   // Get latest weight
   const latestWeight = getLatestWeight();

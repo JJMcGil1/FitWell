@@ -15,6 +15,7 @@ import { useRunStore } from './stores/runStore';
 import { useWeightStore } from './stores/weightStore';
 import { useNavigationStore } from './stores/navigationStore';
 import { useThemeStore } from './stores/themeStore';
+import { useAchievementStore } from './stores/achievementStore';
 import { Sidebar, LoadingScreen, Onboarding, UpdateModal } from './components';
 import { DashboardPage, CalendarPage, WorkoutsPage, RunningPage, WeightPage, VolumePage, GoalsPage, AchievementsPage, WorkoutLibraryPage, SettingsPage } from './pages';
 
@@ -27,6 +28,7 @@ const App: React.FC = () => {
   const { fetchWorkouts, reset: resetWorkouts } = useWorkoutStore();
   const { fetchRuns, reset: resetRuns } = useRunStore();
   const { fetchEntries, reset: resetWeight } = useWeightStore();
+  const { fetchStats: fetchAchievementStats, reset: resetAchievements } = useAchievementStore();
   const { currentPage } = useNavigationStore();
 
   // Initialize theme store (ensures theme is applied on app load)
@@ -45,6 +47,7 @@ const App: React.FC = () => {
       resetWorkouts();
       resetRuns();
       resetWeight();
+      resetAchievements();
 
       // Fetch new user's data
       const today = new Date();
@@ -55,6 +58,7 @@ const App: React.FC = () => {
       fetchWorkouts(currentUser.id, startDate, endDate);
       fetchRuns(currentUser.id, startDate, endDate);
       fetchEntries(currentUser.id);
+      fetchAchievementStats(currentUser.id); // Fetch all-time stats for sidebar streak
     }
   }, [currentUser?.id]);
 
