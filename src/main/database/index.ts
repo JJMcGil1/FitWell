@@ -1490,16 +1490,22 @@ export function getAchievementStats(userId: string): AchievementStats {
     .prepare('SELECT COUNT(*) as count, COALESCE(SUM(distance), 0) as total_miles FROM runs WHERE user_id = ?')
     .get(userId) as { count: number; total_miles: number };
 
-  // Calculate streak from workout dates (consecutive days with workouts)
-  const workoutDates = getDatabase()
-    .prepare('SELECT DISTINCT date FROM workouts WHERE user_id = ? ORDER BY date DESC')
-    .all(userId) as Array<{ date: string }>;
+  // Calculate streak from all activity dates (workouts + cardio runs)
+  const activityDates = getDatabase()
+    .prepare(`
+      SELECT DISTINCT date FROM (
+        SELECT date FROM workouts WHERE user_id = ?
+        UNION
+        SELECT date FROM runs WHERE user_id = ?
+      ) ORDER BY date DESC
+    `)
+    .all(userId, userId) as Array<{ date: string }>;
 
   let currentStreak = 0;
   let longestStreak = 0;
 
-  if (workoutDates.length > 0) {
-    const dates = workoutDates.map((r) => r.date);
+  if (activityDates.length > 0) {
+    const dates = activityDates.map((r) => r.date);
     const dateSet = new Set(dates);
 
     // Calculate current streak (consecutive days from today or yesterday)
