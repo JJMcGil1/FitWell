@@ -11,6 +11,7 @@ import { useWeightStore } from '../stores/weightStore';
 import { useWorkoutStore } from '../stores/workoutStore';
 import { useRunStore, toMiles } from '../stores/runStore';
 import { useNavigationStore } from '../stores/navigationStore';
+import { useAchievementStore } from '../stores/achievementStore';
 import { format, startOfWeek, subDays, isSameDay, addDays, differenceInDays, parseISO } from 'date-fns';
 import { HiOutlineChevronRight, HiOutlineCheck, HiOutlineTrophy } from 'react-icons/hi2';
 import { PiFireFill, PiChartLineUpBold, PiBarbellBold } from 'react-icons/pi';
@@ -359,6 +360,7 @@ export const DashboardPage: React.FC = () => {
   const { workouts, fetchWorkouts, getWorkoutStats } = useWorkoutStore();
   const { runs, fetchRuns } = useRunStore();
   const { navigate } = useNavigationStore();
+  const { stats: achievementStats } = useAchievementStore();
 
   // Fetch data on mount
   useEffect(() => {
@@ -391,25 +393,8 @@ export const DashboardPage: React.FC = () => {
     return { total: uniqueTotal, thisMonth: uniqueThisMonth };
   }, [workouts, runs]);
 
-  // Calculate current streak (workouts + cardio sessions)
-  const currentStreak = useMemo(() => {
-    if (workouts.length === 0 && runs.length === 0) return 0;
-    const activityDates = new Set([
-      ...workouts.map(w => w.date),
-      ...runs.map(r => r.date),
-    ]);
-    const today = new Date();
-    let streak = 0;
-    for (let i = 0; i < 365; i++) {
-      const checkDate = format(subDays(today, i), 'yyyy-MM-dd');
-      if (activityDates.has(checkDate)) {
-        streak++;
-      } else if (i > 0) {
-        break;
-      }
-    }
-    return streak;
-  }, [workouts, runs]);
+  // All-time streak from achievement stats (calculated at database level)
+  const currentStreak = achievementStats?.currentStreak ?? 0;
 
   // Check if user has activity today (workout or cardio)
   const hasWorkoutToday = useMemo(() => {
