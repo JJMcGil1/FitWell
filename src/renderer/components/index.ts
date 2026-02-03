@@ -12,4 +12,4 @@ export { Sidebar } from './Sidebar';
 export { StreakDisplay } from './StreakDisplay';
 export { TitleBar } from './TitleBar';
 export { TodaySummary } from './TodaySummary';
-export { UpdateNotification } from './UpdateNotification';
+export { UpdateModal } from './UpdateModal';

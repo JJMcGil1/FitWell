@@ -15,9 +15,7 @@ import { useRunStore } from './stores/runStore';
 import { useWeightStore } from './stores/weightStore';
 import { useNavigationStore } from './stores/navigationStore';
 import { useThemeStore } from './stores/themeStore';
-// TODO: Re-enable UpdateNotification after Apple Developer Program confirmation
-// import { Sidebar, LoadingScreen, Onboarding, UpdateNotification } from './components';
-import { Sidebar, LoadingScreen, Onboarding } from './components';
+import { Sidebar, LoadingScreen, Onboarding, UpdateModal } from './components';
 import { DashboardPage, CalendarPage, WorkoutsPage, RunningPage, WeightPage, VolumePage, GoalsPage, AchievementsPage, WorkoutLibraryPage, SettingsPage } from './pages';
 
 // ⚠️ DEV FLAG: Set to true to force show onboarding screen for development
@@ -133,9 +131,8 @@ const App: React.FC = () => {
         {renderPage()}
       </main>
 
-      {/* TODO: Re-enable after Apple Developer Program confirmation
-      <UpdateNotification />
-      */}
+      {/* Auto-update toast (self-signing with SHA256 verification) */}
+      <UpdateModal />
     </div>
   );
 };

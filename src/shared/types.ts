@@ -341,19 +341,45 @@ export interface AppSettings {
 }
 
 // ============================================
-// Updater API Types
+// Updater API Types (Self-Signing with SHA256)
 // ============================================
 
+export interface UpdateInfo {
+  version: string;
+  releaseDate: string;
+  releaseNotes: string;
+  currentVersion: string;
+  url: string;
+  sha256: string;
+  size: number;
+}
+
+export interface UpdateCheckResult {
+  updateAvailable: boolean;
+  updateInfo?: UpdateInfo;
+  error?: string;
+}
+
+export interface DownloadProgress {
+  percent: number;
+  transferred: number;
+  total: number;
+  bytesPerSecond: number;
+}
+
 export interface UpdaterApi {
-  checkForUpdates: () => Promise<unknown>;
-  downloadUpdate: () => Promise<unknown>;
-  installUpdate: () => void;
-  onUpdateChecking: (callback: () => void) => () => void;
-  onUpdateAvailable: (callback: (info: { version: string }) => void) => () => void;
-  onUpdateNotAvailable: (callback: () => void) => () => void;
-  onDownloadProgress: (callback: (progress: { percent: number }) => void) => () => void;
-  onUpdateDownloaded: (callback: (info: { version: string }) => void) => () => void;
-  onError: (callback: (error: string) => void) => () => void;
+  // Actions (request/response)
+  checkForUpdates: () => Promise<UpdateCheckResult>;
+  downloadUpdate: () => Promise<string>;
+  installUpdate: () => Promise<void>;
+  getVersion: () => Promise<string>;
+  dismissUpdate: () => Promise<boolean>;
+
+  // Event listeners (push notifications from main)
+  onUpdateAvailable: (callback: (result: { updateAvailable: boolean; updateInfo?: UpdateInfo }) => void) => () => void;
+  onDownloadProgress: (callback: (progress: DownloadProgress) => void) => () => void;
+  onUpdateDownloaded: (callback: (info: { path: string }) => void) => () => void;
+  onUpdateError: (callback: (info: { error: string }) => void) => () => void;
 }
 
 export interface AppInfoApi {

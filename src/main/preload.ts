@@ -11,40 +11,47 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { IpcApi, Goal, DailyLog, WeightEntry, Workout, Run, AppSettings, CreateUserData, WorkoutTemplate } from '../shared/types';
 
-// Updater API
+// ============================================
+// Updater API (Self-Signing with SHA256)
+// ============================================
+
 const updaterApi = {
+  // Actions (invoke = request/response)
   checkForUpdates: () => ipcRenderer.invoke('updater:check'),
   downloadUpdate: () => ipcRenderer.invoke('updater:download'),
   installUpdate: () => ipcRenderer.invoke('updater:install'),
-  onUpdateChecking: (callback: () => void) => {
-    ipcRenderer.on('updater:checking', callback);
-    return () => ipcRenderer.removeListener('updater:checking', callback);
+  getVersion: () => ipcRenderer.invoke('updater:getVersion'),
+  dismissUpdate: () => ipcRenderer.invoke('updater:dismiss'),
+
+  // Event listeners (push notifications from main)
+  onUpdateAvailable: (callback: (result: { updateAvailable: boolean; updateInfo?: unknown }) => void) => {
+    const handler = (_: unknown, result: { updateAvailable: boolean; updateInfo?: unknown }) => callback(result);
+    ipcRenderer.on('update:available', handler);
+    return () => ipcRenderer.removeListener('update:available', handler);
   },
-  onUpdateAvailable: (callback: (info: { version: string }) => void) => {
-    const handler = (_: unknown, info: { version: string }) => callback(info);
-    ipcRenderer.on('updater:available', handler);
-    return () => ipcRenderer.removeListener('updater:available', handler);
+
+  onDownloadProgress: (callback: (progress: { percent: number; transferred: number; total: number; bytesPerSecond: number }) => void) => {
+    const handler = (_: unknown, progress: { percent: number; transferred: number; total: number; bytesPerSecond: number }) => callback(progress);
+    ipcRenderer.on('update:download-progress', handler);
+    return () => ipcRenderer.removeListener('update:download-progress', handler);
   },
-  onUpdateNotAvailable: (callback: () => void) => {
-    ipcRenderer.on('updater:not-available', callback);
-    return () => ipcRenderer.removeListener('updater:not-available', callback);
+
+  onUpdateDownloaded: (callback: (info: { path: string }) => void) => {
+    const handler = (_: unknown, info: { path: string }) => callback(info);
+    ipcRenderer.on('update:downloaded', handler);
+    return () => ipcRenderer.removeListener('update:downloaded', handler);
   },
-  onDownloadProgress: (callback: (progress: { percent: number }) => void) => {
-    const handler = (_: unknown, progress: { percent: number }) => callback(progress);
-    ipcRenderer.on('updater:progress', handler);
-    return () => ipcRenderer.removeListener('updater:progress', handler);
-  },
-  onUpdateDownloaded: (callback: (info: { version: string }) => void) => {
-    const handler = (_: unknown, info: { version: string }) => callback(info);
-    ipcRenderer.on('updater:downloaded', handler);
-    return () => ipcRenderer.removeListener('updater:downloaded', handler);
-  },
-  onError: (callback: (error: string) => void) => {
-    const handler = (_: unknown, error: string) => callback(error);
-    ipcRenderer.on('updater:error', handler);
-    return () => ipcRenderer.removeListener('updater:error', handler);
+
+  onUpdateError: (callback: (info: { error: string }) => void) => {
+    const handler = (_: unknown, info: { error: string }) => callback(info);
+    ipcRenderer.on('update:error', handler);
+    return () => ipcRenderer.removeListener('update:error', handler);
   },
 };
+
+// ============================================
+// Main IPC API
+// ============================================
 
 const api: IpcApi = {
   // User operations
@@ -132,6 +139,10 @@ const api: IpcApi = {
 const appInfoApi = {
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
 };
+
+// ============================================
+// Expose APIs to Renderer
+// ============================================
 
 contextBridge.exposeInMainWorld('api', api);
 contextBridge.exposeInMainWorld('updater', updaterApi);

@@ -7,13 +7,16 @@
 
 import { app, BrowserWindow, shell, nativeImage, ipcMain } from 'electron';
 import path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { initDatabase, closeDatabase } from './database';
 import { registerIpcHandlers } from './ipc/handlers';
-import { autoUpdater } from 'electron-updater';
-
-const execAsync = promisify(exec);
+import {
+  initAutoUpdater,
+  stopAutoUpdater,
+  checkForUpdates,
+  downloadUpdate,
+  installUpdate,
+  getCurrentVersion,
+} from './auto-updater';
 
 // Set app name for dock display (critical for dev mode where Electron binary is used)
 app.setName('FitWell');
@@ -29,7 +32,6 @@ try {
 }
 
 let mainWindow: BrowserWindow | null = null;
-let downloadedFilePath: string | null = null;
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
@@ -73,76 +75,37 @@ async function createWindow(): Promise<void> {
   } else {
     await mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
+
+  // Initialize auto-updater after window is ready
+  initAutoUpdater(mainWindow);
 }
 
-// Auto-updater setup
-function setupAutoUpdater(): void {
-  // Don't check for updates in dev mode
-  if (isDev) return;
+// ============================================
+// IPC Handlers for Updater
+// ============================================
 
-  autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = true;
-
-  autoUpdater.on('checking-for-update', () => {
-    mainWindow?.webContents.send('updater:checking');
-  });
-
-  autoUpdater.on('update-available', (info: { version: string }) => {
-    mainWindow?.webContents.send('updater:available', info);
-  });
-
-  autoUpdater.on('update-not-available', () => {
-    mainWindow?.webContents.send('updater:not-available');
-  });
-
-  autoUpdater.on('download-progress', (progress: { percent: number }) => {
-    mainWindow?.webContents.send('updater:progress', progress);
-  });
-
-  autoUpdater.on('update-downloaded', async (info: { version: string; downloadedFile?: string }) => {
-    // Store the downloaded file path for later
-    if (info.downloadedFile) {
-      downloadedFilePath = info.downloadedFile;
-      console.log('Update downloaded to:', downloadedFilePath);
-
-      // Immediately clear quarantine on the downloaded file
-      if (process.platform === 'darwin') {
-        try {
-          console.log('Clearing quarantine on downloaded update...');
-          await execAsync(`xattr -cr "${downloadedFilePath}" 2>/dev/null || true`);
-
-          // Also clear on the directory containing it
-          const downloadDir = downloadedFilePath.substring(0, downloadedFilePath.lastIndexOf('/'));
-          await execAsync(`xattr -cr "${downloadDir}" 2>/dev/null || true`);
-
-          console.log('Quarantine cleared on downloaded update');
-        } catch (err) {
-          console.error('Error clearing quarantine on download:', err);
-        }
-      }
-    }
-    mainWindow?.webContents.send('updater:downloaded', info);
-  });
-
-  autoUpdater.on('error', (error: Error) => {
-    mainWindow?.webContents.send('updater:error', error.message);
-  });
-
-  // Check for updates after a short delay
-  setTimeout(() => {
-    autoUpdater.checkForUpdates();
-  }, 3000);
-
-  // Also check periodically every 30 minutes while app is running
-  setInterval(() => {
-    autoUpdater.checkForUpdates();
-  }, 30 * 60 * 1000);
-}
-
-// IPC handlers for updater
 ipcMain.handle('updater:check', async () => {
-  if (isDev) return { updateAvailable: false };
-  return autoUpdater.checkForUpdates();
+  if (isDev) {
+    return { updateAvailable: false };
+  }
+  return checkForUpdates();
+});
+
+ipcMain.handle('updater:download', async () => {
+  return downloadUpdate();
+});
+
+ipcMain.handle('updater:install', async () => {
+  return installUpdate();
+});
+
+ipcMain.handle('updater:getVersion', () => {
+  return getCurrentVersion();
+});
+
+ipcMain.handle('updater:dismiss', () => {
+  console.log('[Updater] Update dismissed by user');
+  return true;
 });
 
 // App info handler
@@ -150,44 +113,10 @@ ipcMain.handle('app:getVersion', () => {
   return app.getVersion();
 });
 
-ipcMain.handle('updater:download', async () => {
-  return autoUpdater.downloadUpdate();
-});
+// ============================================
+// App Lifecycle
+// ============================================
 
-ipcMain.handle('updater:install', async () => {
-  // On macOS, clear quarantine attribute before installing
-  if (process.platform === 'darwin') {
-    try {
-      console.log('Clearing quarantine for update installation...');
-
-      // Clear on the specific downloaded file if we have it
-      if (downloadedFilePath) {
-        console.log('Clearing quarantine on:', downloadedFilePath);
-        await execAsync(`xattr -cr "${downloadedFilePath}" 2>/dev/null || true`);
-        const downloadDir = downloadedFilePath.substring(0, downloadedFilePath.lastIndexOf('/'));
-        await execAsync(`xattr -cr "${downloadDir}" 2>/dev/null || true`);
-      }
-
-      // Also clear common update cache locations
-      const userDataPath = app.getPath('userData');
-      const cachePath = userDataPath.replace(/\/Application Support\/.*$/, '/Caches');
-
-      await execAsync(`xattr -cr "${cachePath}/fitwell-updater" 2>/dev/null || true`);
-      await execAsync(`xattr -cr "${cachePath}/com.fitwell"* 2>/dev/null || true`);
-      await execAsync(`xattr -cr ~/Library/Caches/fitwell-updater 2>/dev/null || true`);
-      await execAsync(`xattr -cr /var/folders/*/*/com.fitwell* 2>/dev/null || true`);
-      await execAsync(`xattr -cr /private/var/folders/*/*/T/com.fitwell* 2>/dev/null || true`);
-
-      console.log('Quarantine cleared, proceeding with install');
-    } catch (err) {
-      console.error('Error clearing quarantine:', err);
-    }
-  }
-
-  autoUpdater.quitAndInstall();
-});
-
-// App lifecycle
 app.whenReady().then(() => {
   // Set dock icon on macOS (both dev and prod)
   if (process.platform === 'darwin' && app.dock) {
@@ -199,10 +128,10 @@ app.whenReady().then(() => {
   }
 
   createWindow();
-  setupAutoUpdater();
 });
 
 app.on('window-all-closed', () => {
+  stopAutoUpdater();
   closeDatabase();
   if (process.platform !== 'darwin') {
     app.quit();

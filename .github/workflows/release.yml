@@ -4,13 +4,22 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'package.json'  # Only triggers when package.json changes (version bump)
+  workflow_dispatch:    # Manual trigger option
 
 permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: macos-latest
+  # ============================================
+  # Step 1: Check if release should be created
+  # ============================================
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
 
     steps:
       - name: Checkout code
@@ -18,78 +27,273 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get version from package.json
-        id: version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-
-      - name: Check if release already exists
-        id: check_release
+      - name: Check if release needed
+        id: check
         run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Checking for tag v$VERSION"
+
           git fetch --tags
-          echo "Checking for tag v${{ steps.version.outputs.version }}"
-          git tag -l
-          if git tag -l "v${{ steps.version.outputs.version }}" | grep -q "v${{ steps.version.outputs.version }}"; then
+          if git tag -l "v$VERSION" | grep -q "v$VERSION"; then
             echo "Tag exists, skipping release"
-            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "should_release=false" >> $GITHUB_OUTPUT
           else
             echo "Tag does not exist, proceeding with release"
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "should_release=true" >> $GITHUB_OUTPUT
           fi
 
+  # ============================================
+  # Step 2: Build for all platforms
+  # ============================================
+  build-macos:
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
-        if: steps.check_release.outputs.exists == 'false'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
-        if: steps.check_release.outputs.exists == 'false'
         run: npm ci
 
-      - name: Build app
-        if: steps.check_release.outputs.exists == 'false'
+      - name: Build app (macOS)
         run: npm run build -- --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false  # Skip code signing
 
-      - name: Generate latest-mac.yml
-        if: steps.check_release.outputs.exists == 'false'
+      - name: List release files
+        run: ls -la release/
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: |
+            release/*.dmg
+            release/*.zip
+          retention-days: 1
+
+  build-windows:
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app (Windows)
+        run: npm run build -- --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: List release files
+        run: dir release
+        shell: cmd
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: |
+            release/*.exe
+          retention-days: 1
+
+  build-linux:
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app (Linux)
+        run: npm run build -- --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: List release files
+        run: ls -la release/
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: |
+            release/*.AppImage
+          retention-days: 1
+
+  # ============================================
+  # Step 3: Create release with hashes
+  # ============================================
+  create-release:
+    needs: [check-version, build-macos, build-windows, build-linux]
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Organize release files
         run: |
-          VERSION=${{ steps.version.outputs.version }}
-          ZIP_FILE=$(ls release/*-mac.zip | head -1)
-          ZIP_NAME=$(basename "$ZIP_FILE")
-          ZIP_SIZE=$(stat -f%z "$ZIP_FILE")
-          ZIP_SHA512=$(shasum -a 512 "$ZIP_FILE" | awk '{print $1}' | xxd -r -p | base64)
+          mkdir -p release
+          cp artifacts/macos-build/* release/ 2>/dev/null || true
+          cp artifacts/windows-build/* release/ 2>/dev/null || true
+          cp artifacts/linux-build/* release/ 2>/dev/null || true
+          ls -la release/
 
-          cat > release/latest-mac.yml << EOF
-          version: ${VERSION}
-          files:
-            - url: ${ZIP_NAME}
-              sha512: ${ZIP_SHA512}
-              size: ${ZIP_SIZE}
-          path: ${ZIP_NAME}
-          sha512: ${ZIP_SHA512}
-          releaseDate: $(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
-          EOF
+      - name: Generate latest.json with hashes
+        run: |
+          VERSION=${{ needs.check-version.outputs.version }}
+          echo "Generating latest.json for version $VERSION"
 
-          cat release/latest-mac.yml
+          # Initialize JSON structure
+          cat > release/latest.json << 'JSONSTART'
+          {
+            "version": "VERSION_PLACEHOLDER",
+            "releaseDate": "DATE_PLACEHOLDER",
+            "releaseNotes": "Bug fixes and improvements.",
+            "platforms": {
+          JSONSTART
+
+          # Replace placeholders
+          sed -i "s/VERSION_PLACEHOLDER/$VERSION/" release/latest.json
+          sed -i "s/DATE_PLACEHOLDER/$(date -u +"%Y-%m-%dT%H:%M:%SZ")/" release/latest.json
+
+          # Platform entries
+          FIRST=true
+
+          # macOS DMG
+          for file in release/*.dmg; do
+            if [ -f "$file" ]; then
+              HASH=$(sha256sum "$file" | cut -d' ' -f1)
+              SIZE=$(stat -c%s "$file")
+              FILENAME=$(basename "$file")
+
+              # Determine if arm64 or x64
+              if [[ "$FILENAME" == *"arm64"* ]]; then
+                KEY="mac-arm64"
+              elif [[ "$FILENAME" == *"x64"* ]]; then
+                KEY="mac-x64"
+              else
+                KEY="mac"
+              fi
+
+              if [ "$FIRST" = true ]; then
+                FIRST=false
+              else
+                echo "," >> release/latest.json
+              fi
+              echo "    \"$KEY\": { \"sha256\": \"$HASH\", \"size\": $SIZE }" >> release/latest.json
+            fi
+          done
+
+          # Windows EXE
+          for file in release/*.exe; do
+            if [ -f "$file" ]; then
+              HASH=$(sha256sum "$file" | cut -d' ' -f1)
+              SIZE=$(stat -c%s "$file")
+
+              if [ "$FIRST" = true ]; then
+                FIRST=false
+              else
+                echo "," >> release/latest.json
+              fi
+              echo "    \"win\": { \"sha256\": \"$HASH\", \"size\": $SIZE }" >> release/latest.json
+            fi
+          done
+
+          # Linux AppImage
+          for file in release/*.AppImage; do
+            if [ -f "$file" ]; then
+              HASH=$(sha256sum "$file" | cut -d' ' -f1)
+              SIZE=$(stat -c%s "$file")
+
+              if [ "$FIRST" = true ]; then
+                FIRST=false
+              else
+                echo "," >> release/latest.json
+              fi
+              echo "    \"linux\": { \"sha256\": \"$HASH\", \"size\": $SIZE }" >> release/latest.json
+            fi
+          done
+
+          # Close JSON
+          cat >> release/latest.json << 'JSONEND'
+
+            }
+          }
+          JSONEND
+
+          echo "Generated latest.json:"
+          cat release/latest.json
+
+      - name: Generate hashes.txt
+        run: |
+          cd release
+          sha256sum *.dmg *.exe *.AppImage 2>/dev/null > hashes.txt || true
+          echo "Generated hashes.txt:"
+          cat hashes.txt
 
       - name: Create GitHub Release
-        if: steps.check_release.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: FitWell v${{ steps.version.outputs.version }}
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: FitWell v${{ needs.check-version.outputs.version }}
           draft: false
           prerelease: false
           files: |
             release/*.dmg
-            release/*.zip
-            release/*.blockmap
-            release/latest-mac.yml
+            release/*.exe
+            release/*.AppImage
+            release/latest.json
+            release/hashes.txt
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # ============================================
+  # Skip message when no release needed
+  # ============================================
+  skip-message:
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'false'
+    runs-on: ubuntu-latest
+    steps:
       - name: Skip message
-        if: steps.check_release.outputs.exists == 'true'
-        run: echo "Release v${{ steps.version.outputs.version }} already exists. Bump version in package.json to create a new release."
+        run: |
+          echo "Release v${{ needs.check-version.outputs.version }} already exists."
+          echo "Bump version in package.json to create a new release."
